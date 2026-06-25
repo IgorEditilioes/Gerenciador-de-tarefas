@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{{ board.nome }}</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f6f9;
+            margin: 0;
+        }
+
+        .header {
+            background: #1f2937;
+            color: white;
+            padding: 15px 20px;
+        }
+
+        .container {
+            display: flex;
+            gap: 15px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .coluna {
+            background: #e5e7eb;
+            min-width: 250px;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .coluna h3 {
+            text-align: center;
+        }
+
+        .card {
+            background: white;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="header">
+        <h2>{{ board.nome }}</h2>
+    </div>
+
+    <div class="container">
+
+        {% for status in status_list %}
+
+        <div class="coluna">
+
+            <h3>{{ status.nome }}</h3>
+
+            {% for task in tasks %}
+
+            {% if task.status.id == status.id %}
+
+            <div class="card">
+
+                <strong>{{ task.titulo }}</strong>
+
+                <p>{{ task.descricao }}</p>
+
+            </div>
+
+            {% endif %}
+
+            {% endfor %}
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,233 @@
+*{
+    box-sizing:border-box;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+
+body{
+
+    margin:0;
+    background:#f1f5f9;
+    color:#1e293b;
+
+}
+
+
+
+/* HEADER */
+
+.header{
+
+    height:70px;
+    background:#0f172a;
+    color:white;
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    padding:0 40px;
+
+}
+
+
+
+.logo{
+
+    font-size:22px;
+    font-weight:bold;
+
+}
+
+
+
+.user{
+
+    display:flex;
+    gap:20px;
+    align-items:center;
+
+}
+
+
+
+.logout{
+
+    background:#ef4444;
+    color:white;
+
+    padding:8px 15px;
+    border-radius:6px;
+
+    text-decoration:none;
+
+}
+
+
+
+/* CONTAINER */
+
+
+.container{
+
+    padding:40px;
+
+}
+
+
+
+/* CARDS RESUMO */
+
+
+.stats{
+
+    display:grid;
+
+    grid-template-columns:
+    repeat(auto-fit,minmax(220px,1fr));
+
+    gap:20px;
+
+}
+
+
+
+.card{
+
+    background:white;
+
+    padding:25px;
+
+    border-radius:12px;
+
+    box-shadow:
+    0 4px 10px rgba(0,0,0,.05);
+
+}
+
+
+
+.card h2{
+
+    margin:0;
+
+    font-size:32px;
+
+}
+
+
+
+.card span{
+
+    color:#64748b;
+
+}
+
+
+
+
+
+/* SETORES */
+
+
+.section-title{
+
+    margin-top:40px;
+
+}
+
+
+
+.departments{
+
+
+    display:grid;
+
+    grid-template-columns:
+    repeat(auto-fit,minmax(250px,1fr));
+
+    gap:20px;
+
+
+}
+
+
+
+.department{
+
+
+    background:white;
+
+    padding:25px;
+
+    border-radius:12px;
+
+    cursor:pointer;
+
+    transition:.2s;
+
+
+}
+
+
+
+.department:hover{
+
+    transform:translateY(-5px);
+
+}
+
+
+
+.icon{
+
+    font-size:40px;
+
+}
+
+
+
+.department h3{
+
+    margin:10px 0;
+
+}
+
+
+
+.badge{
+
+    background:#e2e8f0;
+
+    padding:5px 10px;
+
+    border-radius:20px;
+
+    font-size:13px;
+
+}
+
+
+
+/* ATIVIDADES */
+
+
+.activity{
+
+    margin-top:40px;
+
+}
+
+
+
+.activity-item{
+
+    background:white;
+
+    padding:15px;
+
+    margin-bottom:10px;
+
+    border-radius:8px;
+
+}
