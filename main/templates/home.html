@@ -126,7 +126,7 @@
                 <div class="board">
                     <h3>{{ board.nome }}</h3>
                     <p class="text-muted">Workspace: {{ board.workspace.nome }}</p>
-                    <a href="#" class="btn btn-primary">Abrir setor</a>
+                    <a href="{% url 'board' board_id=board.id%}" class="btn btn-primary">Abrir setor</a>
                 </div>
             </div>
             {% empty %}

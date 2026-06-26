@@ -36,7 +36,6 @@ class User(AbstractUser):
         return self.username
 
 
-
 # Empresa / Ambiente
 class Workspace(models.Model):
 
@@ -52,8 +51,6 @@ class Workspace(models.Model):
 
     def __str__(self):
         return self.nome
-
-
 
 
 # Setor / Board
@@ -88,9 +85,6 @@ class Board(models.Model):
 
     def __str__(self):
         return self.nome
-
-
-
 
 
 # Usuários dentro do setor
@@ -131,9 +125,6 @@ class BoardMember(models.Model):
         return f"{self.usuario} - {self.board}"
 
 
-
-
-
 # Workflow
 class Workflow(models.Model):
 
@@ -166,10 +157,6 @@ class Workflow(models.Model):
     def __str__(self):
 
         return self.nome
-
-
-
-
 
 
 # Status principal
@@ -213,10 +200,8 @@ class Status(models.Model):
         return self.nome
 
 
-
 # Tarefa / Card
 class Task(models.Model):
-
 
     PRIORIDADES = (
 
@@ -334,8 +319,6 @@ class Task(models.Model):
         return self.titulo
 
 
-
-
 # Subtarefas
 class SubTask(models.Model):
 
@@ -384,11 +367,8 @@ class SubTask(models.Model):
         return self.titulo
 
 
-
-
 # Histórico da tarefa
 class TaskHistory(models.Model):
-
 
     task = models.ForeignKey(
         Task,

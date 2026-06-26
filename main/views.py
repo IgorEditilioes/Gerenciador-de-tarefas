@@ -84,8 +84,6 @@ def home(request):
         board__workspace=workspace
     ).count()
 
-
-
     contexto = {
 
         "usuario": usuario,
@@ -128,6 +126,6 @@ def board_view(request, board_id):
 
     return render(
         request,
-        "core/board.html",
+        "board.html",
         contexto
     )
