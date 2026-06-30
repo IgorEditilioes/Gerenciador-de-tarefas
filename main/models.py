@@ -215,34 +215,24 @@ class Task(models.Model):
 
     )
 
-
-
     board = models.ForeignKey(
         Board,
         on_delete=models.CASCADE,
         related_name="tarefas"
     )
 
-
-
     workflow = models.ForeignKey(
         Workflow,
         on_delete=models.PROTECT
     )
 
-
-
     titulo = models.CharField(
         max_length=200
     )
 
-
-
     descricao = models.TextField(
         blank=True
     )
-
-
 
     prioridade = models.CharField(
         max_length=20,
@@ -250,16 +240,12 @@ class Task(models.Model):
         default="media"
     )
 
-
-
     status = models.ForeignKey(
         Status,
         on_delete=models.PROTECT,
         default='Pendente',
-        related_name="tarefas"
+        related_name="tasks"
     )
-
-
 
 
     responsavel = models.ForeignKey(
@@ -270,8 +256,6 @@ class Task(models.Model):
         related_name="tarefas_responsaveis"
     )
 
-
-
     criado_por = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -280,11 +264,9 @@ class Task(models.Model):
     )
 
 
-
     ordem = models.PositiveIntegerField(
         default=0
     )
-
 
 
     data_entrega = models.DateField(
@@ -293,17 +275,14 @@ class Task(models.Model):
     )
 
 
-
     criado_em = models.DateTimeField(
         auto_now_add=True
     )
 
 
-
     atualizado_em = models.DateTimeField(
         auto_now=True
     )
-
 
 
     class Meta:
@@ -317,6 +296,34 @@ class Task(models.Model):
     def __str__(self):
 
         return self.titulo
+
+
+class Comment(models.Model):
+
+    task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        related_name="comments"
+    )
+
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+
+    texto = models.TextField()
+
+    criado_em = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    atualizado_em = models.DateTimeField(
+        auto_now=True
+    )
+
+
+    def __str__(self):
+        return f"Comentário em {self.task.titulo}"
 
 
 # Subtarefas
@@ -373,9 +380,8 @@ class TaskHistory(models.Model):
     task = models.ForeignKey(
         Task,
         on_delete=models.CASCADE,
-        related_name="historico"
+        related_name="history"
     )
-
 
     usuario = models.ForeignKey(
         User,
@@ -383,11 +389,19 @@ class TaskHistory(models.Model):
         null=True
     )
 
-
-    acao = models.CharField(
-        max_length=255
+    campo = models.CharField(
+        max_length=100
     )
 
+    valor_antigo = models.TextField(
+        null=True,
+        blank=True
+    )
+
+    valor_novo = models.TextField(
+        null=True,
+        blank=True
+    )
 
     criado_em = models.DateTimeField(
         auto_now_add=True
@@ -395,5 +409,6 @@ class TaskHistory(models.Model):
 
 
     def __str__(self):
+        return f"{self.task.titulo} - {self.campo}"
+    
 
-        return self.acao

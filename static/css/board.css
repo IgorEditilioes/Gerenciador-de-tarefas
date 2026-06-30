@@ -1,0 +1,166 @@
+
+body {
+
+    font-family: Arial, Helvetica, sans-serif;
+
+    background: #f4f6f9;
+
+}
+
+
+/* Cabeçalho */
+
+.board-header {
+
+    padding: 25px 40px;
+
+    background: white;
+
+    border-bottom: 1px solid #ddd;
+
+}
+
+
+.board-header h2 {
+
+    margin: 0;
+
+    font-size: 28px;
+
+}
+
+
+
+/* Área do Kanban */
+
+.kanban-container {
+
+
+    display: flex;
+
+    gap: 20px;
+
+    padding: 30px;
+
+    overflow-x: auto;
+
+
+}
+
+
+
+/* Colunas */
+
+.kanban-column {
+
+
+    background: #e9ecef;
+
+    width: 300px;
+
+    min-height: 400px;
+
+    border-radius: 12px;
+
+    padding: 15px;
+
+
+}
+
+
+
+/* Título da coluna */
+
+.column-title {
+
+
+    font-size: 18px;
+
+    font-weight: bold;
+
+    margin-bottom: 15px;
+
+
+}
+
+
+
+/* Cards */
+
+.task-card {
+
+
+    background: white;
+
+    padding: 15px;
+
+    margin-bottom: 12px;
+
+    border-radius: 10px;
+
+
+    box-shadow: 
+    0 2px 6px rgba(0,0,0,0.08);
+
+
+    cursor: pointer;
+
+    transition: .2s;
+
+
+}
+
+
+
+.task-card:hover {
+
+
+    transform: translateY(-3px);
+
+
+}
+
+
+
+/* Título da tarefa */
+
+.task-card h4 {
+
+
+    font-size: 16px;
+
+    margin-bottom: 8px;
+
+
+}
+
+
+
+/* Descrição */
+
+.task-card p {
+
+
+    font-size: 14px;
+
+    color: #666;
+
+
+}
+
+
+
+/* Quando não tem tarefa */
+
+.empty {
+
+
+    text-align: center;
+
+    color: #888;
+
+    font-size: 14px;
+
+
+}
+
