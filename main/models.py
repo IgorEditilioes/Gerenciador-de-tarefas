@@ -214,22 +214,15 @@ class Status(models.Model):
 
 
 
-
-
 # Tarefa principal
 class Task(models.Model):
 
-
     PRIORIDADES = (
-
         ("baixa", "Baixa"),
         ("media", "Média"),
         ("alta", "Alta"),
         ("urgente", "Urgente"),
-
     )
-
-
 
     board = models.ForeignKey(
         Board,
@@ -237,27 +230,19 @@ class Task(models.Model):
         related_name="tarefas"
     )
 
-
-
     workflow = models.ForeignKey(
         Workflow,
         on_delete=models.PROTECT,
         related_name="tarefas"
     )
 
-
-
     titulo = models.CharField(
         max_length=200
     )
 
-
-
     descricao = models.TextField(
         blank=True
     )
-
-
 
     prioridade = models.CharField(
         max_length=20,
@@ -265,15 +250,11 @@ class Task(models.Model):
         default="media"
     )
 
-
-
     status = models.ForeignKey(
         Status,
         on_delete=models.PROTECT,
         related_name="tasks"
     )
-
-
 
     responsavel = models.ForeignKey(
         User,
@@ -283,55 +264,44 @@ class Task(models.Model):
         related_name="tarefas_responsaveis"
     )
 
-
-
     criado_por = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         related_name="tarefas_criadas"
     )
 
-
+    atualizado_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tarefas_atualizadas"
+    )
 
     ordem = models.PositiveIntegerField(
         default=0
     )
-
-
 
     data_entrega = models.DateField(
         null=True,
         blank=True
     )
 
-
-
     criado_em = models.DateTimeField(
         auto_now_add=True
     )
-
-
 
     atualizado_em = models.DateTimeField(
         auto_now=True
     )
 
-
-
     class Meta:
-
-        ordering = [
-            "ordem"
-        ]
-
-
+        ordering = ["ordem"]
 
     def __str__(self):
-
         return self.titulo
-
-
 
 
 
@@ -370,7 +340,6 @@ class Comment(models.Model):
     def __str__(self):
 
         return f"Comentário - {self.task}"
-
 
 
 
@@ -472,10 +441,6 @@ class SubTask(models.Model):
 
 
 
-
-
-
-# Histórico
 class TaskHistory(models.Model):
 
     task = models.ForeignKey(
@@ -484,36 +449,33 @@ class TaskHistory(models.Model):
         related_name="history"
     )
 
-
     usuario = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
-        null=True
+        null=True,
+        blank=True
     )
-
 
     campo = models.CharField(
         max_length=100
     )
-
 
     valor_antigo = models.TextField(
         null=True,
         blank=True
     )
 
-
     valor_novo = models.TextField(
         null=True,
         blank=True
     )
 
-
     criado_em = models.DateTimeField(
         auto_now_add=True
     )
 
+    class Meta:
+        ordering = ["-criado_em"]
 
     def __str__(self):
-
         return f"{self.task.titulo} - {self.campo}"

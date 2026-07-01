@@ -4,72 +4,170 @@
 <html lang="pt-br">
 
 <head>
-    <meta charset="UTF-8">
-    <title>{{ board.nome }}</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<meta charset="UTF-8">
 
-    <link rel="stylesheet" href="{% static 'css/board.css' %}">
+<title>{{board.nome}}</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<link rel="stylesheet" href="{% static 'css/board.css' %}">
+
+<style>
+
+.comments-area{
+    height:400px;
+    overflow-y:auto;
+}
+
+.comment-box{
+    border-bottom:1px solid #ddd;
+    padding:10px;
+}
+
+</style>
+
 </head>
+
 
 <body>
 
+
 {% include 'navbar.html' %}
 
-<div class="board-header">
-    <h2>{{ board.nome }}</h2>
+
+
+<div class="board-header d-flex justify-content-between align-items-center">
+
+
+<h2>
+
+{{board.nome}}
+
+</h2>
+
+
+
+<button type="button"
+class="btn btn-primary"
+data-bs-toggle="modal"
+data-bs-target="#addTaskModal">
+
+
++ Nova tarefa
+
+
+</button>
+
+
 </div>
+
+
+
+
 
 <div class="kanban-container">
 
+
+
 {% for status in status_list %}
+
+
 
 <div class="kanban-column">
 
+
 <div class="column-title">
-    {{ status.nome }}
+
+{{status.nome}}
+
 </div>
+
+
 
 <div class="tasks">
 
+
+
 {% for task in status.tasks.all %}
 
-<div class="task-card" data-bs-toggle="modal" data-bs-target="#taskModal{{ task.id }}">
+
+
+
+
+<div class="task-card"
+
+data-bs-toggle="modal"
+
+data-bs-target="#taskModal{{task.id}}">
+
 
 <h4>
-{{ task.titulo }}
+
+{{task.titulo}}
+
 </h4>
 
+
 <p>
-{{ task.descricao }}
+
+{{task.descricao}}
+
 </p>
+
 
 </div>
 
 
-<div class="modal fade" id="taskModal{{ task.id }}" tabindex="-1">
+
+
+
+<!-- MODAL TAREFA -->
+
+<div class="modal fade"
+
+id="taskModal{{task.id}}">
+
 
 <div class="modal-dialog modal-xl modal-dialog-centered">
+
 
 <div class="modal-content">
 
 
-<form method="POST" action="{% url 'update_task' task.id %}">
 
-{% csrf_token %}
+<form id="taskForm{{task.id}}"
+
+data-url="{% url 'update_task' task.id %}">
+
 
 
 <div class="modal-header">
 
-<input type="text" 
-name="title" 
+
+<input
+
+name="title"
+
 class="form-control fs-4 fw-bold"
-value="{{ task.titulo }}">
+
+value="{{task.titulo}}">
 
 
-<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+<button type="button"
+
+class="btn-close"
+
+data-bs-dismiss="modal">
+
+</button>
+
 
 </div>
+
+
+
 
 
 <div class="modal-body">
@@ -78,153 +176,64 @@ value="{{ task.titulo }}">
 <div class="row">
 
 
+
 <div class="col-md-8">
 
 
-<h6>Descrição</h6>
 
-<textarea name="description" class="form-control" rows="5">{{ task.descricao }}</textarea>
+<h6>
 
+Descrição
 
-<hr>
-
-
-<h6>Subtarefas</h6>
+</h6>
 
 
-{% for sub in task.subtasks.all %}
+<textarea
 
+name="description"
 
-<div class="border rounded p-2 mb-2">
+class="form-control"
 
+rows="5">
 
-<div class="d-flex justify-content-between">
+{{task.descricao}}
 
+</textarea>
 
-<div>
-
-
-<a href="{% url 'toggle_subtask' sub.id %}">
-
-<input type="checkbox" {% if sub.concluida %}checked{% endif %}>
-
-</a>
-
-
-<strong>
-{{ sub.titulo }}
-</strong>
-
-
-<p class="mb-1">
-{{ sub.descricao }}
-</p>
-
-
-<small>
-Prioridade: {{ sub.get_prioridade_display }}
-</small>
-
-
-</div>
-
-
-<div>
-
-<a href="{% url 'delete_subtask' sub.id %}" class="btn btn-danger btn-sm">
-Excluir
-</a>
-
-</div>
-
-
-</div>
-
-
-</div>
-
-
-{% empty %}
-
-<p class="text-muted">
-Nenhuma subtarefa
-</p>
-
-
-{% endfor %}
-
-
-
-<button type="button" class="btn btn-outline-primary btn-sm">
-+ Adicionar subtarefa
-</button>
 
 
 
 <hr>
 
 
-<h6>Comentários</h6>
 
+<h6>
 
-{% for comment in task.comments.all %}
+Status
 
-
-<div class="border rounded p-2 mb-2">
-
-
-<strong>
-{{ comment.usuario.username }}
-</strong>
-
-
-<p class="mb-1">
-{{ comment.texto }}
-</p>
-
-
-<small class="text-muted">
-{{ comment.criado_em }}
-</small>
-
-
-</div>
-
-
-{% empty %}
-
-<p class="text-muted">
-Nenhum comentário
-</p>
-
-
-{% endfor %}
+</h6>
 
 
 
-</div>
+<select name="status"
+
+class="form-select mb-3">
 
 
-
-<div class="col-md-4">
-
-
-<div class="card p-3">
+{% for s in status_list %}
 
 
-<h6>Status</h6>
+<option value="{{s.id}}"
 
+{% if task.status.id == s.id %}
 
-<select name="status" class="form-select">
+selected
 
+{% endif %}
 
-{% for status in status_list %}
+>
 
-
-<option value="{{ status.id }}" 
-{% if task.status.id == status.id %}selected{% endif %}>
-
-{{ status.nome }}
+{{s.nome}}
 
 </option>
 
@@ -236,36 +245,55 @@ Nenhum comentário
 
 
 
-<br>
 
 
-<h6>Prioridade</h6>
+<h6>
+
+Prioridade
+
+</h6>
 
 
-<select name="prioridade" class="form-select">
+
+<select name="prioridade"
+
+class="form-select mb-3">
 
 
-<option value="baixa"
-{% if task.prioridade == "baixa" %}selected{% endif %}>
+<option value="baixa">
+
 Baixa
+
 </option>
 
 
 <option value="media"
-{% if task.prioridade == "media" %}selected{% endif %}>
+
+{% if task.prioridade == "media" %}
+
+selected
+
+{% endif %}
+
+>
+
 Média
+
 </option>
 
 
-<option value="alta"
-{% if task.prioridade == "alta" %}selected{% endif %}>
+
+<option value="alta">
+
 Alta
+
 </option>
 
 
-<option value="urgente"
-{% if task.prioridade == "urgente" %}selected{% endif %}>
+<option value="urgente">
+
 Urgente
+
 </option>
 
 
@@ -273,27 +301,42 @@ Urgente
 
 
 
-<br>
 
 
-<h6>Responsável</h6>
+
+<h6>
+
+Responsável
+
+</h6>
 
 
-<select name="responsavel" class="form-select">
+<select name="responsavel"
+
+class="form-select">
 
 
 <option value="">
+
 Sem responsável
+
 </option>
 
 
 {% for usuario in usuarios %}
 
 
-<option value="{{ usuario.id }}"
-{% if task.responsavel.id == usuario.id %}selected{% endif %}>
+<option value="{{usuario.id}}"
 
-{{ usuario.username }}
+{% if task.responsavel.id == usuario.id %}
+
+selected
+
+{% endif %}
+
+>
+
+{{usuario.username}}
 
 </option>
 
@@ -305,82 +348,68 @@ Sem responsável
 
 
 
+
 <hr>
 
 
-<h6>Informações</h6>
+
+<h6>
 
 
-<p>
-ID: #{{ task.id }}
-</p>
+Subtarefas
 
 
-<p>
-Criado: {{ task.criado_em }}
-</p>
+<button
+
+type="button"
+
+class="btn btn-sm btn-success"
+
+data-bs-toggle="modal"
+
+data-bs-target="#subTaskModal{{task.id}}">
 
 
-<p>
-Atualizado: {{ task.atualizado_em }}
-</p>
++
 
-
-</div>
-
-
-</div>
-
-
-</div>
-
-
-</div>
-
-
-
-<div class="modal-footer">
-
-
-<button type="submit" class="btn btn-success">
-Salvar alterações
 </button>
 
 
-<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-Fechar
-</button>
-
-
-</div>
-
-
-</form>
+</h6>
 
 
 
-<form method="POST" action="{% url 'add_comment' task.id %}" class="p-3">
 
-{% csrf_token %}
-
-
-<textarea name="comment" 
-class="form-control"
-placeholder="Adicionar comentário"></textarea>
-
-
-<button type="submit" class="btn btn-primary mt-2">
-Comentar
-</button>
-
-
-</form>
+{% for sub in task.subtasks.all %}
 
 
 
-</div>
+<div class="border rounded p-2 mb-2">
 
-</div>
+
+<strong>
+
+{{sub.titulo}}
+
+</strong>
+
+
+<br>
+
+
+Prioridade:
+
+{{sub.prioridade}}
+
+
+
+<br>
+
+
+Responsável:
+
+{{sub.responsavel.username|default:"Não definido"}}
+
 
 </div>
 
@@ -388,27 +417,825 @@ Comentar
 
 {% empty %}
 
-<p class="empty">
-Nenhuma tarefa
+
+<p class="text-muted">
+
+Nenhuma subtarefa
+
 </p>
 
 
 {% endfor %}
 
 
-</div>
+
+
+
+
+<hr>
+
+
+
+<h6>
+
+Informações
+
+</h6>
+
+
+<p>
+
+Criado por:
+
+{{task.criado_por.username}}
+
+</p>
+
+
+<p>
+
+Criado em:
+
+{{task.criado_em}}
+
+</p>
+
+
+
+<p>
+
+Atualizado por:
+
+{{task.atualizado_por.username}}
+
+</p>
+
+
+<p>
+
+Atualizado em:
+
+{{task.atualizado_em}}
+
+</p>
+
+
+
+
+<hr>
+
+
+<h6>
+
+Histórico
+
+</h6>
+
+
+
+{% for item in task.history.all %}
+
+
+<div class="border rounded p-2 mb-2">
+
+
+<strong>
+
+{{item.usuario.username}}
+
+</strong>
+
+
+<br>
+
+
+{{item.campo}}
+
+
+<br>
+
+
+{{item.valor_antigo}}
+
+→
+
+{{item.valor_novo}}
+
+
+<br>
+
+
+<small>
+
+{{item.criado_em}}
+
+</small>
 
 
 </div>
+
+
+{% empty %}
+
+
+<p>
+
+Nenhum histórico
+
+</p>
 
 
 {% endfor %}
 
 
+
 </div>
 
 
+
+
+
+
+<!-- COMENTARIOS -->
+
+<div class="col-md-4 border-start">
+
+
+<h6>
+
+Comentários
+
+</h6>
+
+
+
+<div class="comments-area"
+
+id="comments-{{task.id}}">
+
+
+
+{% for comment in task.comments.all %}
+
+
+<div class="comment-box">
+
+
+<strong>
+
+{{comment.usuario.username}}
+
+</strong>
+
+
+<p>
+
+{{comment.texto}}
+
+</p>
+
+
+</div>
+
+
+{% empty %}
+
+
+<p>
+
+Nenhum comentário
+
+</p>
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+
+<textarea
+
+id="comment-input-{{task.id}}"
+
+class="form-control mt-2">
+
+</textarea>
+
+
+
+
+<button
+
+type="button"
+
+class="btn btn-primary mt-2 w-100"
+
+onclick="addComment({{task.id}})">
+
+
+Comentar
+
+
+</button>
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="modal-footer">
+
+
+<button
+
+type="button"
+
+class="btn btn-success"
+
+onclick="saveTask({{task.id}})">
+
+
+Salvar
+
+
+</button>
+
+
+
+<a href="{% url 'delete_task' task.id %}"
+
+class="btn btn-danger">
+
+
+Excluir
+
+
+</a>
+
+
+
+
+<button
+
+type="button"
+
+class="btn btn-secondary"
+
+data-bs-dismiss="modal">
+
+
+Fechar
+
+
+</button>
+
+
+</div>
+
+
+
+</form>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<!-- MODAL SUBTAREFA -->
+
+
+<div class="modal fade"
+
+id="subTaskModal{{task.id}}">
+
+
+<div class="modal-dialog modal-lg modal-dialog-centered">
+
+
+<div class="modal-content">
+
+
+
+<form method="POST"
+
+action="{% url 'add_subtask' task.id %}">
+
+
+{% csrf_token %}
+
+
+
+<div class="modal-header">
+
+
+<h5>
+
+Nova subtarefa
+
+</h5>
+
+
+
+<button
+
+type="button"
+
+class="btn-close"
+
+data-bs-dismiss="modal">
+
+
+</button>
+
+
+</div>
+
+
+
+
+
+<div class="modal-body">
+
+
+
+<label>
+
+Título
+
+</label>
+
+
+<input
+
+name="titulo"
+
+class="form-control mb-3"
+
+required>
+
+
+
+
+<label>
+
+Responsável
+
+</label>
+
+
+
+<select
+
+name="responsavel"
+
+class="form-select mb-3">
+
+
+<option value="">
+
+Sem responsável
+
+</option>
+
+
+{% for usuario in usuarios %}
+
+
+<option value="{{usuario.id}}">
+
+{{usuario.username}}
+
+</option>
+
+
+{% endfor %}
+
+
+</select>
+
+
+
+
+
+<label>
+
+Prioridade
+
+</label>
+
+
+
+<select
+
+name="prioridade"
+
+class="form-select">
+
+
+<option value="baixa">
+
+Baixa
+
+</option>
+
+
+<option value="media"
+
+selected>
+
+Média
+
+</option>
+
+
+<option value="alta">
+
+Alta
+
+</option>
+
+
+<option value="urgente">
+
+Urgente
+
+</option>
+
+
+</select>
+
+
+
+</div>
+
+
+
+
+<div class="modal-footer">
+
+
+<button
+
+type="button"
+
+class="btn btn-secondary"
+
+data-bs-dismiss="modal">
+
+
+Cancelar
+
+
+</button>
+
+
+
+<button
+
+type="submit"
+
+class="btn btn-success">
+
+
+Criar subtarefa
+
+
+</button>
+
+
+</div>
+
+
+
+</form>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+</div>
+
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+
+
+
+
+
+<!-- MODAL NOVA TAREFA -->
+
+
+<div class="modal fade"
+
+id="addTaskModal">
+
+
+<div class="modal-dialog">
+
+
+<div class="modal-content">
+
+
+<form method="POST"
+
+action="{% url 'add_task' board.id %}">
+
+
+{% csrf_token %}
+
+
+
+<div class="modal-header">
+
+
+<h5>
+
+Nova tarefa
+
+</h5>
+
+
+</div>
+
+
+
+<div class="modal-body">
+
+
+
+<input
+
+name="titulo"
+
+class="form-control mb-3"
+
+placeholder="Título"
+
+required>
+
+
+
+
+<textarea
+
+name="descricao"
+
+class="form-control mb-3"
+
+placeholder="Descrição">
+
+</textarea>
+
+
+
+<select
+
+name="status"
+
+class="form-select">
+
+
+
+{% for status in status_list %}
+
+
+<option value="{{status.id}}">
+
+{{status.nome}}
+
+</option>
+
+
+{% endfor %}
+
+
+</select>
+
+
+
+</div>
+
+
+
+
+<div class="modal-footer">
+
+
+<button
+
+class="btn btn-success">
+
+
+Criar
+
+
+</button>
+
+
+</div>
+
+
+
+</form>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+
+
+<script>
+
+
+const csrftoken = document.cookie
+
+.split('; ')
+
+.find(row=>row.startsWith('csrftoken='))
+
+?.split('=')[1];
+
+
+
+
+function saveTask(id){
+
+
+let form=document.getElementById(
+"taskForm"+id
+);
+
+
+
+fetch(form.dataset.url,{
+
+method:"POST",
+
+headers:{
+
+"X-CSRFToken":csrftoken
+
+},
+
+body:new FormData(form)
+
+
+})
+
+.then(r=>r.json())
+
+.then(data=>{
+
+
+if(data.success){
+
+location.reload();
+
+}
+
+
+});
+
+
+}
+
+
+
+
+
+function addComment(id){
+
+
+let input=document.getElementById(
+"comment-input-"+id
+);
+
+
+
+fetch("/task/"+id+"/comment/",{
+
+
+method:"POST",
+
+
+headers:{
+
+"X-CSRFToken":csrftoken
+
+},
+
+
+body:new URLSearchParams({
+
+comment:input.value
+
+})
+
+
+})
+
+
+.then(r=>r.json())
+
+
+.then(data=>{
+
+
+if(data.success){
+
+
+let area=document.getElementById(
+"comments-"+id
+);
+
+
+
+area.innerHTML += `
+
+<div class="comment-box">
+
+<strong>${data.username}</strong>
+
+<p>${data.texto}</p>
+
+</div>
+
+`;
+
+
+
+input.value="";
+
+
+}
+
+
+});
+
+
+}
+
+
+
+</script>
 
 
 </body>
