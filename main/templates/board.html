@@ -294,13 +294,13 @@ Subtarefas
 </h6>
 
 
-<button 
+<button
 type="button"
 class="btn btn-sm btn-primary"
-data-bs-toggle="modal"
-data-bs-target="#addSubTaskModal{{task.id}}">
+onclick="openSubtaskModal({{task.id}})">
 
 +
+
 </button>
 
 
@@ -1015,24 +1015,6 @@ placeholder="Descrição">
 </textarea>
 
 
-
-
-<select name="status"
-class="form-select">
-
-
-{% for status in status_list %}
-
-
-<option value="{{status.id}}">
-{{status.nome}}
-</option>
-
-
-{% endfor %}
-
-
-</select>
 
 
 
