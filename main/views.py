@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 from django.db.models import Count
 
 from .forms import LoginForm
@@ -16,18 +16,31 @@ from .models import (
     TaskHistory,
     Workflow
 )
+from .decorators import (
+    admin_required,
+    gerente_or_admin_required,
+    usuario_or_higher_required,
+    check_permission_user_workspace,
+    check_permission_user_board,
+    check_permission_edit_task,
+    check_permission_delete_task,
+    check_permission_delete_board,
+    check_permission_edit_subtask,
+    check_permission_delete_subtask,
+    check_permission_create_task,
+    check_permission_create_board,
+    check_permission_complete_task,
+)
 
 
 # =========================
 # LOGIN
 # =========================
 def login_view(request):
-
     if request.method == "POST":
         form = LoginForm(request.POST)
 
         if form.is_valid():
-
             username = form.cleaned_data["username"]
             password = form.cleaned_data["password"]
 
@@ -47,7 +60,6 @@ def login_view(request):
                     return redirect("home")
                 else:
                     messages.error(request, "Senha inválida")
-
     else:
         form = LoginForm()
 
@@ -68,11 +80,16 @@ def logout_view(request):
 # =========================
 @login_required
 def home(request):
-
     usuario = request.user
     workspace = usuario.workspace
 
-    boards = Board.objects.filter(workspace=workspace)
+    # Admin vê todos os boards, outros vêem apenas do seu workspace
+    if usuario.tipo == 'admin':
+        boards = Board.objects.all()
+    else:
+        boards = Board.objects.filter(workspace=workspace)
+
+    usuarios = User.objects.filter(workspace=workspace)
 
     total_tarefas = Task.objects.filter(
         board__workspace=workspace
@@ -85,19 +102,77 @@ def home(request):
             "usuario": usuario,
             "workspace": workspace,
             "boards": boards,
+            "usuarios": usuarios,
             "total_tarefas": total_tarefas
         }
     )
 
 
 # =========================
-# BOARD
+# CREATE BOARD - APENAS ADMIN E GERENTE
+# =========================
+@login_required
+def create_board(request):
+    if request.method != "POST":
+        return redirect("home")
+    
+    usuario = request.user
+    workspace = usuario.workspace
+    
+    # Verifica permissão para criar board
+    if not check_permission_create_board(usuario, workspace):
+        messages.error(request, "Você não tem permissão para criar setores.")
+        return redirect("home")
+    
+    board = Board.objects.create(
+        workspace=workspace,
+        nome=request.POST.get("nome"),
+        descricao=request.POST.get("descricao", ""),
+        privado=request.POST.get("privado") == "on"
+    )
+    
+    workflow = Workflow.objects.create(
+        board=board,
+        nome="Padrão",
+        padrao=True
+    )
+    
+    Status.objects.create(
+        workflow=workflow,
+        nome="A Fazer",
+        ordem=1,
+        cor="#FF4444"
+    )
+    Status.objects.create(
+        workflow=workflow,
+        nome="Em Andamento",
+        ordem=2,
+        cor="#FFA500"
+    )
+    Status.objects.create(
+        workflow=workflow,
+        nome="Concluído",
+        ordem=3,
+        cor="#00C851"
+    )
+    
+    messages.success(request, f"Setor '{board.nome}' criado com sucesso!")
+    return redirect("home")
+
+
+# =========================
+# BOARD - VISUALIZAÇÃO
 # =========================
 @login_required
 def board_view(request, board_id):
-
     board = get_object_or_404(Board, id=board_id)
-
+    usuario = request.user
+    
+    # Verifica permissão de acesso
+    if not check_permission_user_board(usuario, board):
+        messages.error(request, "Você não tem permissão para acessar este setor.")
+        return redirect("home")
+    
     status_list = Status.objects.filter(
         workflow__board=board
     ).order_by(
@@ -116,43 +191,40 @@ def board_view(request, board_id):
         {
             "board": board,
             "status_list": status_list,
-            "usuarios": usuarios
+            "usuarios": usuarios,
+            "user_tipo": usuario.tipo,
         }
     )
 
 
 # =========================
-# ADD TASK - CORRIGIDO
+# ADD TASK
 # =========================
 @login_required
 def add_task(request, board_id):
-
     board = get_object_or_404(Board, id=board_id)
+    usuario = request.user
+    
+    # Verifica permissão para criar tarefa
+    if not check_permission_create_task(usuario, board):
+        messages.error(request, "Você não tem permissão para criar tarefas neste setor.")
+        return redirect("board", board_id=board.id)
 
     if request.method != "POST":
         return redirect("board", board_id=board.id)
 
-    if board.workspace != request.user.workspace:
-        return JsonResponse(
-            {"success": False, "error": "Sem permissão"},
-            status=403
-        )
-
-    # 🔥 CORREÇÃO: Buscar o primeiro status do workflow padrão
+    # Buscar o primeiro status do workflow padrão
     workflow = Workflow.objects.filter(board=board, padrao=True).first()
     
     if not workflow:
-        # Se não tiver workflow padrão, pega o primeiro
         workflow = Workflow.objects.filter(board=board).first()
     
     if not workflow:
-        # Se não tiver nenhum workflow, cria um padrão
         workflow = Workflow.objects.create(
             board=board,
             nome="Padrão",
             padrao=True
         )
-        # Cria status padrão
         Status.objects.create(
             workflow=workflow,
             nome="A Fazer",
@@ -172,11 +244,9 @@ def add_task(request, board_id):
             cor="#00C851"
         )
     
-    # Busca o primeiro status do workflow
     status = Status.objects.filter(workflow=workflow).first()
     
     if not status:
-        # Se não tiver status, cria um
         status = Status.objects.create(
             workflow=workflow,
             nome="A Fazer",
@@ -184,8 +254,11 @@ def add_task(request, board_id):
             cor="#FF4444"
         )
 
-    # 🔥 CORREÇÃO: Capturar o responsável do POST
     responsavel_id = request.POST.get("responsavel")
+    
+    # REGRA: Usuário comum só pode criar tarefa para si mesmo
+    if usuario.tipo == 'usuario':
+        responsavel_id = usuario.id
     
     task = Task.objects.create(
         board=board,
@@ -194,9 +267,9 @@ def add_task(request, board_id):
         descricao=request.POST.get("descricao", ""),
         status=status,
         prioridade=request.POST.get("prioridade", "media"),
-        responsavel_id=responsavel_id if responsavel_id else None,  # 🔥 CORREÇÃO
-        criado_por=request.user,
-        atualizado_por=request.user
+        responsavel_id=responsavel_id if responsavel_id else None,
+        criado_por=usuario,
+        atualizado_por=usuario
     )
 
     TaskHistory.objects.create(
@@ -211,15 +284,32 @@ def add_task(request, board_id):
 
 
 # =========================
-# UPDATE TASK - CORRIGIDO
+# UPDATE TASK
 # =========================
 @login_required
 def update_task(request, task_id):
-
     if request.method != "POST":
         return JsonResponse({"success": False})
 
     task = get_object_or_404(Task, id=task_id)
+    usuario = request.user
+    
+    # Verifica permissão para editar
+    if not check_permission_edit_task(usuario, task):
+        return JsonResponse(
+            {"success": False, "error": "Sem permissão para editar esta tarefa"},
+            status=403
+        )
+
+    # REGRA: Usuário comum NÃO pode alterar status para "Concluído"
+    novo_status = request.POST.get("status")
+    if usuario.tipo == 'usuario':
+        status_obj = get_object_or_404(Status, id=novo_status)
+        if status_obj.nome.lower() == "concluído":
+            return JsonResponse(
+                {"success": False, "error": "Usuários comuns não podem concluir tarefas"},
+                status=403
+            )
 
     campos = {
         "titulo": request.POST.get("title"),
@@ -230,18 +320,14 @@ def update_task(request, task_id):
     }
 
     for campo, novo_valor in campos.items():
-
         if campo == "status":
             antigo = str(task.status_id)
-
         elif campo == "responsavel":
             antigo = str(task.responsavel_id)
-
         else:
             antigo = str(getattr(task, campo))
 
         if str(antigo) != str(novo_valor):
-
             TaskHistory.objects.create(
                 task=task,
                 usuario=request.user,
@@ -255,7 +341,6 @@ def update_task(request, task_id):
     task.prioridade = campos["prioridade"]
     task.status_id = campos["status"]
 
-    # 🔥 CORREÇÃO: Atribuir responsável corretamente
     responsavel_valor = campos["responsavel"]
     task.responsavel_id = int(responsavel_valor) if responsavel_valor and responsavel_valor != '' else None
 
@@ -270,12 +355,77 @@ def update_task(request, task_id):
 # =========================
 @login_required
 def delete_task(request, task_id):
-
     task = get_object_or_404(Task, id=task_id)
+    usuario = request.user
+    
+    # Verifica permissão para excluir
+    if not check_permission_delete_task(usuario, task):
+        messages.error(request, "Você não tem permissão para excluir esta tarefa.")
+        return redirect("board", board_id=task.board.id)
+    
     board_id = task.board.id
     task.delete()
-
+    messages.success(request, "Tarefa excluída com sucesso!")
     return redirect("board", board_id=board_id)
+
+
+# =========================
+# COMPLETE TASK - APENAS GERENTE E ADMIN
+# =========================
+@login_required
+def complete_task(request, task_id):
+    """Endpoint específico para marcar tarefa como concluída"""
+    task = get_object_or_404(Task, id=task_id)
+    usuario = request.user
+    
+    # Verifica se o usuário pode completar a tarefa
+    if not check_permission_complete_task(usuario, task):
+        messages.error(request, "Apenas Gerentes e Administradores podem concluir tarefas.")
+        return redirect("board", board_id=task.board.id)
+    
+    # Busca o status "Concluído"
+    status_concluido = Status.objects.filter(
+        workflow__board=task.board,
+        nome__icontains="concluído"
+    ).first()
+    
+    if not status_concluido:
+        status_concluido = Status.objects.filter(
+            workflow__board=task.board
+        ).last()
+    
+    if status_concluido:
+        task.status = status_concluido
+        task.save()
+        
+        TaskHistory.objects.create(
+            task=task,
+            usuario=usuario,
+            campo="Status",
+            valor_antigo="",
+            valor_novo="Concluído"
+        )
+        
+        messages.success(request, "Tarefa concluída com sucesso!")
+    
+    return redirect("board", board_id=task.board.id)
+
+
+# =========================
+# DELETE BOARD - APENAS ADMIN E GERENTE
+# =========================
+@login_required
+def delete_board(request, board_id):
+    board = get_object_or_404(Board, id=board_id)
+    usuario = request.user
+    
+    if not check_permission_delete_board(usuario, board):
+        messages.error(request, "Você não tem permissão para excluir este setor.")
+        return redirect("home")
+    
+    board.delete()
+    messages.success(request, "Setor excluído com sucesso!")
+    return redirect("home")
 
 
 # =========================
@@ -283,11 +433,18 @@ def delete_task(request, task_id):
 # =========================
 @login_required
 def add_comment(request, task_id):
-
     if request.method != "POST":
         return JsonResponse({"success": False})
 
     task = get_object_or_404(Task, id=task_id)
+    usuario = request.user
+    
+    # Verifica se o usuário tem acesso ao board da tarefa
+    if not check_permission_user_board(usuario, task.board):
+        return JsonResponse(
+            {"success": False, "error": "Sem permissão"},
+            status=403
+        )
 
     texto = request.POST.get("comment")
 
@@ -313,19 +470,30 @@ def add_comment(request, task_id):
 @login_required
 def add_subtask(request, task_id):
     task = get_object_or_404(Task, id=task_id)
+    usuario = request.user
+    
+    # Verifica se tem acesso ao board
+    if not check_permission_user_board(usuario, task.board):
+        return JsonResponse(
+            {"success": False, "error": "Sem permissão"},
+            status=403
+        )
 
     if request.method == "POST":
         responsavel_id = request.POST.get("responsavel")
+        
+        # REGRA: Usuário comum só pode criar subtarefa para si mesmo
+        if usuario.tipo == 'usuario':
+            responsavel_id = usuario.id
         
         subtask = SubTask.objects.create(
             task=task,
             titulo=request.POST.get("titulo"),
             prioridade=request.POST.get("prioridade", "media"),
             responsavel_id=responsavel_id if responsavel_id else None,
-            criado_por=request.user
+            criado_por=usuario
         )
         
-        # Retorna JSON com os dados da subtask criada
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': True,
@@ -346,6 +514,12 @@ def add_subtask(request, task_id):
 @login_required
 def update_subtask(request, subtask_id):
     subtask = get_object_or_404(SubTask, id=subtask_id)
+    usuario = request.user
+    
+    # Verifica permissão para editar subtask
+    if not check_permission_edit_subtask(usuario, subtask):
+        messages.error(request, "Você não tem permissão para editar esta subtarefa.")
+        return redirect("board", board_id=subtask.task.board.id)
 
     if request.method == "POST":
         subtask.titulo = request.POST.get("titulo")
@@ -362,7 +536,6 @@ def update_subtask(request, subtask_id):
 
         subtask.save()
         
-        # Retorna JSON com os dados atualizados
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': True,
@@ -382,33 +555,47 @@ def update_subtask(request, subtask_id):
 
 @login_required
 def delete_subtask(request, subtask_id):
-
     subtask = get_object_or_404(SubTask, id=subtask_id)
+    usuario = request.user
+    
+    # Verifica permissão para excluir subtask
+    if not check_permission_delete_subtask(usuario, subtask):
+        messages.error(request, "Você não tem permissão para excluir esta subtarefa.")
+        return redirect("board", board_id=subtask.task.board.id)
+    
     board_id = subtask.task.board.id
     subtask.delete()
-
     return redirect("board", board_id=board_id)
 
 
 @login_required
 def toggle_subtask(request, subtask_id):
-
     subtask = get_object_or_404(SubTask, id=subtask_id)
+    usuario = request.user
+    
+    # Verifica permissão para alternar status
+    if usuario.tipo == 'usuario':
+        # Usuário comum só pode alternar se for responsável ou criador
+        if not (usuario == subtask.responsavel or usuario == subtask.criado_por):
+            messages.error(request, "Você não tem permissão para alterar esta subtarefa.")
+            return redirect("board", board_id=subtask.task.board.id)
+    
     subtask.concluida = not subtask.concluida
     subtask.save()
-
     return redirect("board", board_id=subtask.task.board.id)
 
-
-# Adicione esta função no final do seu views.py
 
 # =========================
 # GET SUBTASKS (AJAX)
 # =========================
 @login_required
 def get_subtasks(request, task_id):
-    """Retorna as subtasks de uma tarefa via AJAX"""
     task = get_object_or_404(Task, id=task_id)
+    usuario = request.user
+    
+    if not check_permission_user_board(usuario, task.board):
+        return JsonResponse({'success': False, 'error': 'Sem permissão'}, status=403)
+    
     subtasks = task.subtasks.all()
     
     data = []

@@ -1,166 +1,707 @@
+/* ============================================
+   BOARD MODERNO - CSS COMPLETO
+   ============================================ */
+
+/* ----- RESET E BASE ----- */
+* {
+    box-sizing: border-box;
+}
 
 body {
-
-    font-family: Arial, Helvetica, sans-serif;
-
-    background: #f4f6f9;
-
+    background: #f0f2f5;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    padding: 0;
 }
 
-
-/* Cabeçalho */
-
+/* ----- HEADER DO BOARD ----- */
 .board-header {
-
-    padding: 25px 40px;
-
-    background: white;
-
-    border-bottom: 1px solid #ddd;
-
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 24px 40px;
+    border-radius: 0 0 20px 20px;
+    margin: 0 20px 30px 20px;
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.35);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
 }
-
 
 .board-header h2 {
-
-    margin: 0;
-
+    color: #ffffff;
     font-size: 28px;
-
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.5px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-
-
-/* Área do Kanban */
-
-.kanban-container {
-
-
-    display: flex;
-
-    gap: 20px;
-
-    padding: 30px;
-
-    overflow-x: auto;
-
-
+.board-header h2 small {
+    font-size: 14px;
+    font-weight: 400;
+    opacity: 0.8;
+    margin-left: 12px;
 }
 
-
-
-/* Colunas */
-
-.kanban-column {
-
-
-    background: #e9ecef;
-
-    width: 300px;
-
-    min-height: 400px;
-
+.board-header .btn-primary {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    color: #fff;
+    padding: 10px 24px;
     border-radius: 12px;
-
-    padding: 15px;
-
-
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
 }
 
+.board-header .btn-primary:hover {
+    background: rgba(255, 255, 255, 0.35);
+    border-color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
 
+.board-header .btn-primary i {
+    margin-right: 8px;
+}
 
-/* Título da coluna */
+/* ----- CONTAINER KANBAN ----- */
+.kanban-container {
+    display: flex;
+    gap: 20px;
+    padding: 0 20px 30px 20px;
+    overflow-x: auto;
+    align-items: flex-start;
+    min-height: calc(100vh - 200px);
+}
 
+/* ----- COLUNAS ----- */
+.kanban-column {
+    flex: 0 0 320px;
+    min-width: 280px;
+    max-width: 380px;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 16px 14px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
+    max-height: calc(100vh - 200px);
+    display: flex;
+    flex-direction: column;
+}
+
+.kanban-column:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    border-color: rgba(102, 126, 234, 0.15);
+}
+
+/* ----- TÍTULO DA COLUNA ----- */
 .column-title {
-
-
-    font-size: 18px;
-
-    font-weight: bold;
-
-    margin-bottom: 15px;
-
-
-}
-
-
-
-/* Cards */
-
-.task-card {
-
-
-    background: white;
-
-    padding: 15px;
-
-    margin-bottom: 12px;
-
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a1a2e;
+    padding: 8px 12px;
+    margin-bottom: 14px;
     border-radius: 10px;
-
-
-    box-shadow: 
-    0 2px 6px rgba(0,0,0,0.08);
-
-
-    cursor: pointer;
-
-    transition: .2s;
-
-
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fc;
+    letter-spacing: -0.2px;
+    flex-shrink: 0;
 }
 
+.column-title .badge-count {
+    background: #e9ecf5;
+    color: #4a4a6a;
+    font-size: 12px;
+    padding: 2px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+}
 
+/* ----- ÁREA DE TASKS ----- */
+.tasks {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 4px;
+    min-height: 100px;
+}
+
+.tasks::-webkit-scrollbar {
+    width: 4px;
+}
+
+.tasks::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tasks::-webkit-scrollbar-thumb {
+    background: #d1d5e0;
+    border-radius: 10px;
+}
+
+/* ----- CARD DA TAREFA ----- */
+.task-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    border: 1px solid #eef0f5;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
 
 .task-card:hover {
-
-
     transform: translateY(-3px);
-
-
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.12);
+    border-color: #667eea;
+    background: #fafbff;
 }
-
-
-
-/* Título da tarefa */
 
 .task-card h4 {
-
-
-    font-size: 16px;
-
-    margin-bottom: 8px;
-
-
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 0 0 6px 0;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
-
-
-
-/* Descrição */
 
 .task-card p {
-
-
-    font-size: 14px;
-
-    color: #666;
-
-
+    font-size: 13px;
+    color: #6b7280;
+    margin: 0 0 10px 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.5;
 }
 
-
-
-/* Quando não tem tarefa */
-
-.empty {
-
-
-    text-align: center;
-
-    color: #888;
-
-    font-size: 14px;
-
-
+.task-card .task-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 12px;
+    color: #8b92a5;
+    border-top: 1px solid #f0f2f7;
+    padding-top: 10px;
+    margin-top: 4px;
 }
 
+.task-card .task-meta .badge-priority {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.badge-priority.baixa {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.badge-priority.media {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.badge-priority.alta {
+    background: #fce4ec;
+    color: #c62828;
+}
+
+.badge-priority.urgente {
+    background: #ffebee;
+    color: #b71c1c;
+    animation: pulse-urgent 2s infinite;
+}
+
+@keyframes pulse-urgent {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.task-card .task-meta .avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.task-card .task-meta .subtask-count {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #8b92a5;
+}
+
+.task-card .task-meta .subtask-count i {
+    font-size: 14px;
+}
+
+/* Prioridade - borda lateral colorida */
+.task-card.priority-baixa {
+    border-left: 4px solid #66bb6a;
+}
+
+.task-card.priority-media {
+    border-left: 4px solid #ffa726;
+}
+
+.task-card.priority-alta {
+    border-left: 4px solid #ef5350;
+}
+
+.task-card.priority-urgente {
+    border-left: 4px solid #d32f2f;
+    background: #fff8f8;
+}
+
+/* ----- MODAL MODERNO ----- */
+.modal-content {
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    border-bottom: 1px solid #f0f2f7;
+    padding: 20px 28px;
+    background: #fafbff;
+    border-radius: 20px 20px 0 0;
+}
+
+.modal-header .form-control {
+    border: none;
+    font-size: 20px;
+    font-weight: 700;
+    padding: 0;
+    background: transparent;
+    color: #1a1a2e;
+}
+
+.modal-header .form-control:focus {
+    box-shadow: none;
+    outline: none;
+}
+
+.modal-body {
+    padding: 24px 28px;
+    background: #ffffff;
+}
+
+.modal-footer {
+    border-top: 1px solid #f0f2f7;
+    padding: 16px 28px;
+    background: #fafbff;
+    border-radius: 0 0 20px 20px;
+}
+
+/* Estilização dos campos do modal */
+.modal-body h6 {
+    font-weight: 600;
+    color: #1a1a2e;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    margin-top: 16px;
+}
+
+.modal-body h6:first-of-type {
+    margin-top: 0;
+}
+
+.modal-body .form-control,
+.modal-body .form-select {
+    border-radius: 10px;
+    border: 2px solid #eef0f5;
+    padding: 10px 14px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.modal-body .form-control:focus,
+.modal-body .form-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.modal-body textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* ----- SUBTASKS NO MODAL ----- */
+.subtask-item {
+    background: #f8f9fc;
+    border-radius: 10px !important;
+    border: 1px solid #eef0f5 !important;
+    padding: 12px 16px !important;
+    transition: all 0.2s ease;
+}
+
+.subtask-item:hover {
+    background: #f0f2ff;
+    border-color: #667eea !important;
+}
+
+.subtask-item.subtask-concluida {
+    opacity: 0.6;
+    background: #f5f5f5;
+}
+
+.subtask-item.subtask-concluida strong {
+    text-decoration: line-through;
+    color: #8b92a5;
+}
+
+.subtask-item .btn-outline-success {
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 14px;
+}
+
+.subtask-item .btn-outline-primary {
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 14px;
+}
+
+/* ----- HISTÓRICO ----- */
+.history-item {
+    background: #f8f9fc;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border-left: 3px solid #667eea;
+}
+
+.history-item strong {
+    color: #1a1a2e;
+    font-size: 13px;
+}
+
+.history-item .history-change {
+    font-size: 13px;
+    color: #4a4a6a;
+    margin: 4px 0 2px 0;
+}
+
+.history-item .history-change .old-value {
+    color: #ef5350;
+    text-decoration: line-through;
+    font-weight: 500;
+}
+
+.history-item .history-change .new-value {
+    color: #66bb6a;
+    font-weight: 500;
+}
+
+.history-item small {
+    color: #8b92a5;
+    font-size: 11px;
+}
+
+/* ----- COMENTÁRIOS ----- */
+.comments-area {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.comments-area::-webkit-scrollbar {
+    width: 4px;
+}
+
+.comments-area::-webkit-scrollbar-thumb {
+    background: #d1d5e0;
+    border-radius: 10px;
+}
+
+.comment-box {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #f8f9fc;
+    margin-bottom: 10px;
+    border: 1px solid #eef0f5;
+}
+
+.comment-box strong {
+    color: #1a1a2e;
+    font-size: 13px;
+}
+
+.comment-box p {
+    margin: 4px 0 0 0;
+    font-size: 14px;
+    color: #374151;
+    line-height: 1.5;
+}
+
+.comment-box small {
+    color: #8b92a5;
+    font-size: 11px;
+}
+
+/* ----- BOTÕES DOS MODAIS ----- */
+.modal-footer .btn {
+    border-radius: 10px;
+    padding: 8px 20px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.modal-footer .btn-success {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+}
+
+.modal-footer .btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+}
+
+.modal-footer .btn-danger {
+    background: #ef5350;
+    border: none;
+}
+
+.modal-footer .btn-danger:hover {
+    background: #d32f2f;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(239, 83, 80, 0.35);
+}
+
+.modal-footer .btn-secondary {
+    background: #eef0f5;
+    border: none;
+    color: #4a4a6a;
+}
+
+.modal-footer .btn-secondary:hover {
+    background: #e2e5ed;
+}
+
+/* ----- BOTÃO NOVA TAREFA (botão flutuante) ----- */
+.btn-floating {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    border: none;
+    font-size: 28px;
+    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    display: none;
+}
+
+.btn-floating:hover {
+    transform: scale(1.1) translateY(-3px);
+    box-shadow: 0 12px 40px rgba(102, 126, 234, 0.5);
+    color: #fff;
+}
+
+/* ----- RESPONSIVIDADE ----- */
+@media (max-width: 1200px) {
+    .kanban-column {
+        flex: 0 0 280px;
+        min-width: 260px;
+    }
+}
+
+@media (max-width: 992px) {
+    .board-header {
+        padding: 18px 24px;
+        margin: 0 10px 20px 10px;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .board-header h2 {
+        font-size: 22px;
+    }
+    
+    .kanban-container {
+        padding: 0 10px 20px 10px;
+        gap: 14px;
+    }
+    
+    .kanban-column {
+        flex: 0 0 260px;
+        min-width: 240px;
+        padding: 12px;
+    }
+}
+
+@media (max-width: 768px) {
+    .board-header {
+        padding: 16px 18px;
+        margin: 0 5px 15px 5px;
+        border-radius: 0 0 16px 16px;
+    }
+    
+    .board-header h2 {
+        font-size: 18px;
+    }
+    
+    .board-header .btn-primary {
+        padding: 8px 18px;
+        font-size: 13px;
+        width: 100%;
+        text-align: center;
+    }
+    
+    .kanban-container {
+        padding: 0 5px 15px 5px;
+        gap: 10px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+    
+    .kanban-column {
+        flex: 0 0 240px;
+        min-width: 220px;
+        padding: 10px;
+        max-height: calc(100vh - 160px);
+    }
+    
+    .task-card {
+        padding: 12px 14px;
+    }
+    
+    .task-card h4 {
+        font-size: 13px;
+    }
+    
+    .modal-dialog {
+        margin: 10px;
+    }
+    
+    .modal-body {
+        padding: 16px;
+    }
+    
+    .modal-header {
+        padding: 14px 16px;
+    }
+    
+    .modal-footer {
+        padding: 12px 16px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .modal-footer .btn {
+        flex: 1;
+        min-width: 80px;
+        font-size: 13px;
+        padding: 8px 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .board-header h2 {
+        font-size: 16px;
+    }
+    
+    .kanban-column {
+        flex: 0 0 200px;
+        min-width: 190px;
+        padding: 8px;
+    }
+    
+    .column-title {
+        font-size: 13px;
+        padding: 6px 10px;
+    }
+    
+    .task-card {
+        padding: 10px 12px;
+    }
+    
+    .task-card h4 {
+        font-size: 12px;
+    }
+    
+    .task-card p {
+        font-size: 11px;
+    }
+}
+
+/* ============================================
+   ANIMAÇÕES ADICIONAIS
+   ============================================ */
+
+/* Ao adicionar uma nova task */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.task-card-new {
+    animation: slideIn 0.3s ease forwards;
+}
+
+/* Skeleton loading */
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* Scrollbar global */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #d1d5e0;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #b0b8c8;
+}

@@ -12,7 +12,8 @@ from .views import (
     update_subtask,
     toggle_subtask,
     delete_subtask,
-    get_subtasks,  # 👈 ADICIONADO
+    get_subtasks,
+    create_board,  # 👈 IMPORTADO
 )
 
 urlpatterns = [
@@ -31,6 +32,7 @@ urlpatterns = [
     # BOARD
     # ======================
     path("board/<int:board_id>/", board_view, name="board"),
+    path("board/create/", create_board, name="create_board"),  # 👈 ADICIONADO
 
     # ======================
     # TASKS
@@ -42,7 +44,7 @@ urlpatterns = [
     # ======================
     # SUBTASKS
     # ======================
-    path("task/<int:task_id>/subtasks/", get_subtasks, name="get_subtasks"),  # 👈 NOVO
+    path("task/<int:task_id>/subtasks/", get_subtasks, name="get_subtasks"),
     path("task/<int:task_id>/add-subtask/", add_subtask, name="add_subtask"),
     path("subtask/<int:subtask_id>/update/", update_subtask, name="update_subtask"),
     path("subtask/<int:subtask_id>/toggle/", toggle_subtask, name="toggle_subtask"),
