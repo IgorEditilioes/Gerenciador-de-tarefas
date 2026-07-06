@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.db.models import Count
 
 from .forms import LoginForm
 from .models import (
@@ -12,7 +13,8 @@ from .models import (
     Status,
     Comment,
     SubTask,
-    TaskHistory
+    TaskHistory,
+    Workflow
 )
 
 
@@ -120,7 +122,96 @@ def board_view(request, board_id):
 
 
 # =========================
-# UPDATE TASK
+# ADD TASK - CORRIGIDO
+# =========================
+@login_required
+def add_task(request, board_id):
+
+    board = get_object_or_404(Board, id=board_id)
+
+    if request.method != "POST":
+        return redirect("board", board_id=board.id)
+
+    if board.workspace != request.user.workspace:
+        return JsonResponse(
+            {"success": False, "error": "Sem permissão"},
+            status=403
+        )
+
+    # 🔥 CORREÇÃO: Buscar o primeiro status do workflow padrão
+    workflow = Workflow.objects.filter(board=board, padrao=True).first()
+    
+    if not workflow:
+        # Se não tiver workflow padrão, pega o primeiro
+        workflow = Workflow.objects.filter(board=board).first()
+    
+    if not workflow:
+        # Se não tiver nenhum workflow, cria um padrão
+        workflow = Workflow.objects.create(
+            board=board,
+            nome="Padrão",
+            padrao=True
+        )
+        # Cria status padrão
+        Status.objects.create(
+            workflow=workflow,
+            nome="A Fazer",
+            ordem=1,
+            cor="#FF4444"
+        )
+        Status.objects.create(
+            workflow=workflow,
+            nome="Em Andamento",
+            ordem=2,
+            cor="#FFA500"
+        )
+        Status.objects.create(
+            workflow=workflow,
+            nome="Concluído",
+            ordem=3,
+            cor="#00C851"
+        )
+    
+    # Busca o primeiro status do workflow
+    status = Status.objects.filter(workflow=workflow).first()
+    
+    if not status:
+        # Se não tiver status, cria um
+        status = Status.objects.create(
+            workflow=workflow,
+            nome="A Fazer",
+            ordem=1,
+            cor="#FF4444"
+        )
+
+    # 🔥 CORREÇÃO: Capturar o responsável do POST
+    responsavel_id = request.POST.get("responsavel")
+    
+    task = Task.objects.create(
+        board=board,
+        workflow=workflow,
+        titulo=request.POST.get("titulo"),
+        descricao=request.POST.get("descricao", ""),
+        status=status,
+        prioridade=request.POST.get("prioridade", "media"),
+        responsavel_id=responsavel_id if responsavel_id else None,  # 🔥 CORREÇÃO
+        criado_por=request.user,
+        atualizado_por=request.user
+    )
+
+    TaskHistory.objects.create(
+        task=task,
+        usuario=request.user,
+        campo="Criação",
+        valor_antigo="",
+        valor_novo="Tarefa criada"
+    )
+
+    return redirect("board", board_id=board.id)
+
+
+# =========================
+# UPDATE TASK - CORRIGIDO
 # =========================
 @login_required
 def update_task(request, task_id):
@@ -164,9 +255,9 @@ def update_task(request, task_id):
     task.prioridade = campos["prioridade"]
     task.status_id = campos["status"]
 
-    task.responsavel_id = (
-        campos["responsavel"] if campos["responsavel"] else None
-    )
+    # 🔥 CORREÇÃO: Atribuir responsável corretamente
+    responsavel_valor = campos["responsavel"]
+    task.responsavel_id = int(responsavel_valor) if responsavel_valor and responsavel_valor != '' else None
 
     task.atualizado_por = request.user
     task.save()
@@ -175,47 +266,16 @@ def update_task(request, task_id):
 
 
 # =========================
-# ADD TASK
+# DELETE TASK
 # =========================
 @login_required
-def add_task(request, board_id):
+def delete_task(request, task_id):
 
-    board = get_object_or_404(Board, id=board_id)
+    task = get_object_or_404(Task, id=task_id)
+    board_id = task.board.id
+    task.delete()
 
-    if request.method != "POST":
-        return redirect("board", board_id=board.id)
-
-    if board.workspace != request.user.workspace:
-        return JsonResponse(
-            {"success": False, "error": "Sem permissão"},
-            status=403
-        )
-
-    status = get_object_or_404(
-        Status,
-        id=request.POST.get("status")
-    )
-
-    task = Task.objects.create(
-        board=board,
-        workflow=status.workflow,
-        titulo=request.POST.get("titulo"),
-        descricao=request.POST.get("descricao", ""),
-        status=status,
-        prioridade="media",
-        criado_por=request.user,
-        atualizado_por=request.user
-    )
-
-    TaskHistory.objects.create(
-        task=task,
-        usuario=request.user,
-        campo="Criação",
-        valor_antigo="",
-        valor_novo="Tarefa criada"
-    )
-
-    return redirect("board", board_id=board.id)
+    return redirect("board", board_id=board_id)
 
 
 # =========================
@@ -252,49 +312,72 @@ def add_comment(request, task_id):
 # =========================
 @login_required
 def add_subtask(request, task_id):
-
     task = get_object_or_404(Task, id=task_id)
 
     if request.method == "POST":
-
-        SubTask.objects.create(
+        responsavel_id = request.POST.get("responsavel")
+        
+        subtask = SubTask.objects.create(
             task=task,
             titulo=request.POST.get("titulo"),
-            prioridade=request.POST.get("prioridade"),
-            responsavel_id=request.POST.get("responsavel") or None,
+            prioridade=request.POST.get("prioridade", "media"),
+            responsavel_id=responsavel_id if responsavel_id else None,
             criado_por=request.user
         )
+        
+        # Retorna JSON com os dados da subtask criada
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'subtask': {
+                    'id': subtask.id,
+                    'titulo': subtask.titulo,
+                    'prioridade': subtask.prioridade,
+                    'prioridade_display': subtask.get_prioridade_display(),
+                    'concluida': subtask.concluida,
+                    'responsavel': subtask.responsavel.username if subtask.responsavel else None,
+                    'responsavel_id': subtask.responsavel.id if subtask.responsavel else None,
+                }
+            })
 
     return redirect("board", board_id=task.board.id)
 
 
 @login_required
 def update_subtask(request, subtask_id):
-
     subtask = get_object_or_404(SubTask, id=subtask_id)
 
     if request.method == "POST":
-
         subtask.titulo = request.POST.get("titulo")
         subtask.prioridade = request.POST.get("prioridade")
-        subtask.responsavel_id = request.POST.get("responsavel") or None
+        
+        concluida = request.POST.get("concluida")
+        if concluida == "True":
+            subtask.concluida = True
+        elif concluida == "False":
+            subtask.concluida = False
+        
+        responsavel_id = request.POST.get("responsavel")
+        subtask.responsavel_id = int(responsavel_id) if responsavel_id and responsavel_id != '' else None
 
         subtask.save()
+        
+        # Retorna JSON com os dados atualizados
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'subtask': {
+                    'id': subtask.id,
+                    'titulo': subtask.titulo,
+                    'prioridade': subtask.prioridade,
+                    'prioridade_display': subtask.get_prioridade_display(),
+                    'concluida': subtask.concluida,
+                    'responsavel': subtask.responsavel.username if subtask.responsavel else None,
+                    'responsavel_id': subtask.responsavel.id if subtask.responsavel else None,
+                }
+            })
 
     return redirect("board", board_id=subtask.task.board.id)
-
-
-# =========================
-# DELETE TASK
-# =========================
-@login_required
-def delete_task(request, task_id):
-
-    task = get_object_or_404(Task, id=task_id)
-    board_id = task.board.id
-    task.delete()
-
-    return redirect("board", board_id=board_id)
 
 
 @login_required
@@ -307,9 +390,6 @@ def delete_subtask(request, subtask_id):
     return redirect("board", board_id=board_id)
 
 
-# =========================
-# TOGGLE SUBTASK
-# =========================
 @login_required
 def toggle_subtask(request, subtask_id):
 
@@ -318,3 +398,29 @@ def toggle_subtask(request, subtask_id):
     subtask.save()
 
     return redirect("board", board_id=subtask.task.board.id)
+
+
+# Adicione esta função no final do seu views.py
+
+# =========================
+# GET SUBTASKS (AJAX)
+# =========================
+@login_required
+def get_subtasks(request, task_id):
+    """Retorna as subtasks de uma tarefa via AJAX"""
+    task = get_object_or_404(Task, id=task_id)
+    subtasks = task.subtasks.all()
+    
+    data = []
+    for sub in subtasks:
+        data.append({
+            'id': sub.id,
+            'titulo': sub.titulo,
+            'prioridade': sub.prioridade,
+            'prioridade_display': sub.get_prioridade_display(),
+            'concluida': sub.concluida,
+            'responsavel': sub.responsavel.username if sub.responsavel else None,
+            'responsavel_id': sub.responsavel.id if sub.responsavel else None,
+        })
+    
+    return JsonResponse({'success': True, 'subtasks': data})

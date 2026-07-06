@@ -4,1575 +4,820 @@
 <html lang="pt-br">
 
 <head>
+    <meta charset="UTF-8">
+    <title>{{board.nome}}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/board.css' %}">
 
-<meta charset="UTF-8">
+    <style>
+        .comments-area {
+            height: 400px;
+            overflow-y: auto;
+        }
 
-<title>{{board.nome}}</title>
+        .comment-box {
+            border-bottom: 1px solid #ddd;
+            padding: 10px;
+        }
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-<link rel="stylesheet" href="{% static 'css/board.css' %}">
-
-
-<style>
-
-.comments-area{
-    height:400px;
-    overflow-y:auto;
-}
-
-.comment-box{
-    border-bottom:1px solid #ddd;
-    padding:10px;
-}
-
-.subtask-box{
-    border:1px solid #ddd;
-    border-radius:8px;
-    padding:10px;
-    margin-bottom:10px;
-}
-
-</style>
-
+        .subtask-box {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .subtask-item {
+            transition: all 0.3s ease;
+        }
+        
+        .subtask-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .subtask-concluida {
+            opacity: 0.7;
+        }
+        
+        .subtask-concluida strong {
+            text-decoration: line-through;
+        }
+    </style>
 </head>
 
-
 <body>
-
-
-{% include 'navbar.html' %}
-
-
-
-<div class="board-header d-flex justify-content-between align-items-center">
-
-
-<h2>
-{{board.nome}}
-</h2>
-
-
-<button class="btn btn-primary"
-data-bs-toggle="modal"
-data-bs-target="#addTaskModal">
-
-+ Nova tarefa
-
-</button>
-
-
-</div>
-
-
-
-
-
-<div class="kanban-container">
-
-
-{% for status in status_list %}
-
-
-<div class="kanban-column">
-
-
-<div class="column-title">
-
-{{status.nome}}
-
-</div>
-
-
-
-<div class="tasks">
-
-
-
-{% for task in status.tasks.all %}
-
-
-
-
-<div class="task-card"
-data-bs-toggle="modal"
-data-bs-target="#taskModal{{task.id}}">
-
-
-<h4>
-{{task.titulo}}
-</h4>
-
-
-<p>
-{{task.descricao}}
-</p>
-
-
-</div>
-
-
-
-
-
-<!-- ==========================
-MODAL TAREFA
-========================== -->
-
-
-<div class="modal fade"
-id="taskModal{{task.id}}">
-
-
-<div class="modal-dialog modal-xl modal-dialog-centered">
-
-
-<div class="modal-content">
-
-
-<form id="taskForm{{task.id}}"
-data-url="{% url 'update_task' task.id %}">
-
-
-{% csrf_token %}
-
-
-
-<div class="modal-header">
-
-
-<input
-name="title"
-class="form-control fs-4 fw-bold"
-value="{{task.titulo}}">
-
-
-<button type="button"
-class="btn-close"
-data-bs-dismiss="modal">
-
-</button>
-
-
-</div>
-
-
-
-
-
-<div class="modal-body">
-
-
-<div class="row">
-
-
-<div class="col-md-8">
-
-
-
-<h6>
-Descrição
-</h6>
-
-
-<textarea
-name="description"
-class="form-control"
-rows="5">{{task.descricao}}</textarea>
-
-
-
-<hr>
-
-
-
-<h6>
-Status
-</h6>
-
-
-<select name="status"
-class="form-select mb-3">
-
-
-{% for s in status_list %}
-
-
-<option value="{{s.id}}"
-{% if task.status.id == s.id %}selected{% endif %}>
-
-{{s.nome}}
-
-</option>
-
-
-{% endfor %}
-
-
-</select>
-
-
-
-
-<h6>
-Prioridade
-</h6>
-
-
-<select name="prioridade"
-class="form-select mb-3">
-
-
-<option value="baixa">
-Baixa
-</option>
-
-
-<option value="media"
-{% if task.prioridade == "media" %}selected{% endif %}>
-Média
-</option>
-
-
-<option value="alta">
-Alta
-</option>
-
-
-<option value="urgente">
-Urgente
-</option>
-
-
-</select>
-
-
-
-
-<h6>
-Responsável
-</h6>
-
-
-<select name="responsavel"
-class="form-select">
-
-
-<option value="">
-Sem responsável
-</option>
-
-
-
-{% for usuario in usuarios %}
-
-
-<option value="{{usuario.id}}">
-
-{{usuario.username}}
-
-</option>
-
-
-{% endfor %}
-
-
-</select>
-
-
-
-
-<hr>
-
-
-<hr>
-
-<div class="d-flex justify-content-between align-items-center">
-
-<h6 class="mb-0">
-Subtarefas
-</h6>
-
-
-<button
-type="button"
-class="btn btn-sm btn-primary"
-onclick="openSubtaskModal({{task.id}})">
-
-+
-
-</button>
-
-
-</div>
-
-
-<div class="mt-3">
-
-
-{% for sub in task.subtasks.all %}
-
-
-<div class="border rounded p-2 mb-2 d-flex justify-content-between align-items-center">
-
-
-<div>
-
-
-<strong>
-
-{{sub.titulo}}
-
-</strong>
-
-
-<br>
-
-
-<small class="text-muted">
-
-Status:
-
-{% if sub.concluida %}
-
-Concluída
-
-{% else %}
-
-Pendente
-
-{% endif %}
-
-
-|
-
-Prioridade:
-
-{{sub.get_prioridade_display}}
-
-
-</small>
-
-
-</div>
-
-
-
-<button
-type="button"
-class="btn btn-sm btn-outline-primary"
-data-bs-toggle="modal"
-data-bs-target="#editSubTaskModal{{sub.id}}">
-
-
-Editar
-
-
-</button>
-
-
-
-</div>
-
-
-
-
-
-<!-- MODAL EDITAR SUBTASK -->
-
-<div class="modal fade"
-id="editSubTaskModal{{sub.id}}">
-
-
-<div class="modal-dialog">
-
-
-<div class="modal-content">
-
-
-<form method="POST"
-action="{% url 'update_subtask' sub.id %}">
-
-
-{% csrf_token %}
-
-
-
-<div class="modal-header">
-
-
-<h5>
-
-Editar subtarefa
-
-</h5>
-
-
-<button
-type="button"
-class="btn-close"
-data-bs-dismiss="modal">
-
-</button>
-
-
-</div>
-
-
-
-
-
-<div class="modal-body">
-
-
-<label>
-Título
-</label>
-
-
-<input
-class="form-control mb-3"
-name="titulo"
-value="{{sub.titulo}}">
-
-
-
-
-
-<label>
-Prioridade
-</label>
-
-
-<select
-name="prioridade"
-class="form-select mb-3">
-
-
-<option value="baixa"
-{% if sub.prioridade == "baixa" %}selected{% endif %}>
-Baixa
-</option>
-
-
-<option value="media"
-{% if sub.prioridade == "media" %}selected{% endif %}>
-Média
-</option>
-
-
-<option value="alta"
-{% if sub.prioridade == "alta" %}selected{% endif %}>
-Alta
-</option>
-
-
-<option value="urgente"
-{% if sub.prioridade == "urgente" %}selected{% endif %}>
-Urgente
-</option>
-
-
-</select>
-
-
-
-
-<label>
-
-Status
-
-</label>
-
-
-<select
-name="concluida"
-class="form-select mb-3">
-
-
-<option value="False"
-{% if not sub.concluida %}selected{% endif %}>
-
-Pendente
-
-</option>
-
-
-<option value="True"
-{% if sub.concluida %}selected{% endif %}>
-
-Concluída
-
-</option>
-
-
-</select>
-
-
-
-
-<label>
-
-Responsável
-
-</label>
-
-
-<select
-name="responsavel"
-class="form-select">
-
-
-<option value="">
-
-Sem responsável
-
-</option>
-
-
-
-{% for usuario in usuarios %}
-
-
-<option value="{{usuario.id}}"
-
-{% if sub.responsavel.id == usuario.id %}
-selected
-{% endif %}
-
->
-
-{{usuario.username}}
-
-</option>
-
-
-{% endfor %}
-
-
-</select>
-
-
-
-</div>
-
-
-
-
-
-
-<div class="modal-footer">
-
-
-<button
-type="submit"
-class="btn btn-success">
-
-Salvar
-
-</button>
-
-
-
-<a
-href="{% url 'delete_subtask' sub.id %}"
-class="btn btn-danger">
-
-Excluir
-
-</a>
-
-
-
-</div>
-
-
-</form>
-
-
-
-</div>
-
-
-</div>
-
-
-</div>
-
-
-
-
-{% empty %}
-
-
-<p class="text-muted">
-
-Nenhuma subtarefa
-
-</p>
-
-
-{% endfor %}
-
-
-</div>
-
-
-
-
-
-<hr>
-
-
-<h6>
-Histórico
-</h6>
-
-
-
-{% for h in task.history.all %}
-
-
-<div class="border rounded p-2 mb-2">
-
-
-<strong>
-{{h.usuario.username}}
-</strong>
-
-
-<p>
-Alterou:
-{{h.campo}}
-</p>
-
-
-<p>
-{{h.valor_antigo}}
-→
-{{h.valor_novo}}
-</p>
-
-
-<small>
-{{h.criado_em}}
-</small>
-
-
-</div>
-
-
-
-{% empty %}
-
-
-<p class="text-muted">
-Sem histórico
-</p>
-
-
-{% endfor %}
-
-
-
-</div>
-
-
-
-
-
-<div class="col-md-4 border-start">
-
-
-
-<h6>
-Comentários
-</h6>
-
-
-
-<div class="comments-area"
-id="comments-{{task.id}}">
-
-
-
-{% for comment in task.comments.all %}
-
-
-<div class="comment-box">
-
-
-<strong>
-{{comment.usuario.username}}
-</strong>
-
-
-<p>
-{{comment.texto}}
-</p>
-
-
-</div>
-
-
-
-{% endfor %}
-
-
-
-</div>
-
-
-
-<textarea
-id="comment-input-{{task.id}}"
-class="form-control mt-2"
-placeholder="Adicionar comentário">
-
-</textarea>
-
-
-<button type="button"
-class="btn btn-primary w-100 mt-2"
-onclick="addComment({{task.id}})">
-
-Comentar
-
-</button>
-
-
-
-</div>
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-<div class="modal-footer">
-
-
-
-<button type="button"
-class="btn btn-danger"
-onclick="deleteTask({{task.id}})">
-
-Excluir tarefa
-
-</button>
-
-
-
-
-<button type="button"
-class="btn btn-success"
-onclick="saveTask({{task.id}})">
-
-Salvar e fechar
-
-</button>
-
-
-
-<button type="button"
-class="btn btn-secondary"
-data-bs-dismiss="modal">
-
-Fechar
-
-</button>
-
-
-
-</div>
-
-
-</form>
-
-
-</div>
-
-</div>
-
-</div>
-
-
-
-
-
-<!-- ==========================
-MODAL SUBTAREFA
-========================== -->
-
-
-<div class="modal fade"
-id="subtaskModal{{task.id}}">
-
-
-<div class="modal-dialog modal-dialog-centered">
-
-
-<div class="modal-content">
-
-
-<form id="subtaskForm{{task.id}}"
-action="{% url 'add_subtask' task.id %}"
-method="POST">
-
-
-{% csrf_token %}
-
-
-<div class="modal-header">
-
-
-<h5>
-Nova subtarefa
-</h5>
-
-
-<button type="button"
-class="btn-close"
-data-bs-dismiss="modal">
-
-</button>
-
-
-</div>
-
-
-
-<div class="modal-body">
-
-
-<input
-name="titulo"
-class="form-control mb-3"
-placeholder="Título"
-required>
-
-
-<select
-name="prioridade"
-class="form-select mb-3">
-
-
-<option value="baixa">
-Baixa
-</option>
-
-
-<option value="media">
-Média
-</option>
-
-
-<option value="alta">
-Alta
-</option>
-
-
-<option value="urgente">
-Urgente
-</option>
-
-
-</select>
-
-
-<select
-name="responsavel"
-class="form-select">
-
-
-<option value="">
-Sem responsável
-</option>
-
-
-{% for usuario in usuarios %}
-
-
-<option value="{{usuario.id}}">
-{{usuario.username}}
-</option>
-
-
-{% endfor %}
-
-
-</select>
-
-
-</div>
-
-
-
-
-<div class="modal-footer">
-
-
-<button type="button"
-class="btn btn-success"
-onclick="saveSubtask({{task.id}})">
-
-Salvar
-
-</button>
-
-
-</div>
-
-
-
-</form>
-
-
-</div>
-
-
-</div>
-
-
-</div>
-
-
-
-
-{% endfor %}
-
-
-</div>
-
-
-</div>
-
-
-{% endfor %}
-
-
-</div>
-
-
-
-
-
-
-<!-- =====================================================
-     MODAL NOVA TAREFA
-===================================================== -->
-
-
-<div class="modal fade"
-id="addTaskModal">
-
-
-<div class="modal-dialog">
-
-
-<div class="modal-content">
-
-
-<form method="POST"
-action="{% url 'add_task' board.id %}">
-
-
-{% csrf_token %}
-
-
-
-<div class="modal-header">
-
-<h5>
-Nova tarefa
-</h5>
-
-
-</div>
-
-
-<div class="modal-body">
-
-
-<input
-name="titulo"
-class="form-control mb-3"
-placeholder="Título"
-required>
-
-
-
-<textarea
-name="descricao"
-class="form-control mb-3"
-placeholder="Descrição">
-
-</textarea>
-
-
-
-
-
-</div>
-
-
-
-<div class="modal-footer">
-
-
-<button class="btn btn-primary">
-
-Criar
-
-</button>
-
-
-</div>
-
-
-
-</form>
-
-
-</div>
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-
-
-
-<!-- =====================================================
-     PARTE 2 - JAVASCRIPT
-     COLE AQUI
-===================================================== -->
-<script>
-
-function getCookie(name) {
-
-    let cookieValue = null;
-
-    if (document.cookie && document.cookie !== '') {
-
-        const cookies = document.cookie.split(';');
-
-        for (let i = 0; i < cookies.length; i++) {
-
-            const cookie = cookies[i].trim();
-
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-
-                cookieValue = decodeURIComponent(
-                    cookie.substring(name.length + 1)
-                );
-
-                break;
+    {% include 'navbar.html' %}
+
+    <div class="board-header d-flex justify-content-between align-items-center">
+        <h2>{{board.nome}}</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+            + Nova tarefa
+        </button>
+    </div>
+
+    <div class="kanban-container">
+        {% for status in status_list %}
+        <div class="kanban-column">
+            <div class="column-title">{{status.nome}}</div>
+
+            <div class="tasks">
+                {% for task in status.tasks.all %}
+                <div class="task-card" data-bs-toggle="modal" data-bs-target="#taskModal{{task.id}}">
+                    <h4>{{task.titulo}}</h4>
+                    <p>{{task.descricao|truncatechars:50}}</p>
+                    <small class="text-muted">
+                        {% if task.responsavel %}
+                        👤 {{task.responsavel.username}}
+                        {% endif %}
+                        {% if task.subtasks.count > 0 %}
+                        | 📋 {{task.subtasks.count}} subtarefas
+                        {% endif %}
+                    </small>
+                </div>
+
+                <!-- ==========================
+                MODAL TAREFA
+                ========================== -->
+                <div class="modal fade" id="taskModal{{task.id}}" data-task-id="{{task.id}}">
+                    <div class="modal-dialog modal-xl modal-dialog-centered">
+                        <div class="modal-content">
+                            <form id="taskForm{{task.id}}" data-url="{% url 'update_task' task.id %}">
+                                {% csrf_token %}
+
+                                <div class="modal-header">
+                                    <input name="title" class="form-control fs-4 fw-bold" value="{{task.titulo}}">
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+
+                                <div class="modal-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <h6>Descrição</h6>
+                                            <textarea name="description" class="form-control" rows="5">{{task.descricao}}</textarea>
+
+                                            <hr>
+
+                                            <h6>Status</h6>
+                                            <select name="status" class="form-select mb-3">
+                                                {% for s in status_list %}
+                                                <option value="{{s.id}}" {% if task.status.id == s.id %}selected{% endif %}>
+                                                    {{s.nome}}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+
+                                            <h6>Prioridade</h6>
+                                            <select name="prioridade" class="form-select mb-3">
+                                                <option value="baixa" {% if task.prioridade == "baixa" %}selected{% endif %}>Baixa</option>
+                                                <option value="media" {% if task.prioridade == "media" %}selected{% endif %}>Média</option>
+                                                <option value="alta" {% if task.prioridade == "alta" %}selected{% endif %}>Alta</option>
+                                                <option value="urgente" {% if task.prioridade == "urgente" %}selected{% endif %}>Urgente</option>
+                                            </select>
+
+                                            <h6>Responsável</h6>
+                                            <select name="responsavel" class="form-select">
+                                                <option value="">Sem responsável</option>
+                                                {% for usuario in usuarios %}
+                                                <option value="{{usuario.id}}" {% if task.responsavel.id == usuario.id %}selected{% endif %}>
+                                                    {{usuario.username}}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+
+                                            <hr>
+
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0">Subtarefas (<span id="subtask-count-{{task.id}}">{{task.subtasks.count}}</span>)</h6>
+                                                <button type="button" class="btn btn-sm btn-primary" onclick="openSubtaskModal({{task.id}})">
+                                                    +
+                                                </button>
+                                            </div>
+
+                                            <div class="mt-3" id="subtasks-container-{{task.id}}">
+                                                {% for sub in task.subtasks.all %}
+                                                <div class="border rounded p-2 mb-2 d-flex justify-content-between align-items-center subtask-item {% if sub.concluida %}subtask-concluida{% endif %}" 
+                                                     id="subtask-{{sub.id}}" data-subtask-id="{{sub.id}}">
+                                                    <div>
+                                                        <strong>{{ sub.titulo }}</strong>
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            <span class="badge {% if sub.concluida %}bg-success{% else %}bg-warning{% endif %}">
+                                                                {% if sub.concluida %}Concluída{% else %}Pendente{% endif %}
+                                                            </span>
+                                                            Prioridade: {{ sub.get_prioridade_display }}
+                                                            {% if sub.responsavel %}
+                                                            | 👤 {{ sub.responsavel.username }}
+                                                            {% endif %}
+                                                        </small>
+                                                    </div>
+                                                    <div>
+                                                        <button type="button" class="btn btn-sm btn-outline-success me-1" 
+                                                                onclick="toggleSubtask({{ sub.id }})">
+                                                            {% if sub.concluida %}↩{% else %}✓{% endif %}
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                                onclick="openEditSubtaskModal({{ sub.id }})">
+                                                            ✏️
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                {% empty %}
+                                                <p class="text-muted" id="no-subtasks-{{task.id}}">Nenhuma subtarefa</p>
+                                                {% endfor %}
+                                            </div>
+
+                                            <hr>
+
+                                            <h6>Histórico</h6>
+                                            <div style="max-height: 200px; overflow-y: auto;">
+                                                {% for h in task.history.all|slice:":10" %}
+                                                <div class="border rounded p-2 mb-2">
+                                                    <strong>{{h.usuario.username}}</strong>
+                                                    <p class="mb-0">Alterou: {{h.campo}}</p>
+                                                    <p class="mb-0 small">{{h.valor_antigo}} → {{h.valor_novo}}</p>
+                                                    <small class="text-muted">{{h.criado_em|date:"d/m/Y H:i"}}</small>
+                                                </div>
+                                                {% empty %}
+                                                <p class="text-muted">Sem histórico</p>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-4 border-start">
+                                            <h6>Comentários</h6>
+                                            <div class="comments-area" id="comments-{{task.id}}">
+                                                {% for comment in task.comments.all %}
+                                                <div class="comment-box">
+                                                    <strong>{{comment.usuario.username}}</strong>
+                                                    <p>{{comment.texto}}</p>
+                                                    <small class="text-muted">{{comment.criado_em|date:"d/m/Y H:i"}}</small>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                            <textarea id="comment-input-{{task.id}}" class="form-control mt-2" placeholder="Adicionar comentário"></textarea>
+                                            <button type="button" class="btn btn-primary w-100 mt-2" onclick="addComment({{task.id}})">
+                                                Comentar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-danger" onclick="deleteTask({{task.id}})">
+                                        Excluir tarefa
+                                    </button>
+                                    <button type="button" class="btn btn-success" onclick="saveTask({{task.id}})">
+                                        Salvar e fechar
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        Fechar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==========================
+                MODAL SUBTAREFA (CRIAR)
+                ========================== -->
+                <div class="modal fade" id="subtaskModal{{task.id}}">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5>Nova subtarefa</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <input id="subtask-title-{{task.id}}" class="form-control mb-3" placeholder="Título" required>
+                                <select id="subtask-prioridade-{{task.id}}" class="form-select mb-3">
+                                    <option value="baixa">Baixa</option>
+                                    <option value="media" selected>Média</option>
+                                    <option value="alta">Alta</option>
+                                    <option value="urgente">Urgente</option>
+                                </select>
+                                <select id="subtask-responsavel-{{task.id}}" class="form-select">
+                                    <option value="">Sem responsável</option>
+                                    {% for usuario in usuarios %}
+                                    <option value="{{usuario.id}}">{{usuario.username}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="button" class="btn btn-success" onclick="saveSubtask({{task.id}})">Salvar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==========================
+                MODAL EDITAR SUBTAREFA
+                ========================== -->
+                <div class="modal fade" id="editSubTaskModal{{task.id}}">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5>Editar subtarefa</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <input id="edit-subtask-title-{{task.id}}" class="form-control mb-3" placeholder="Título" required>
+                                <select id="edit-subtask-prioridade-{{task.id}}" class="form-select mb-3">
+                                    <option value="baixa">Baixa</option>
+                                    <option value="media">Média</option>
+                                    <option value="alta">Alta</option>
+                                    <option value="urgente">Urgente</option>
+                                </select>
+                                <select id="edit-subtask-concluida-{{task.id}}" class="form-select mb-3">
+                                    <option value="False">Pendente</option>
+                                    <option value="True">Concluída</option>
+                                </select>
+                                <select id="edit-subtask-responsavel-{{task.id}}" class="form-select">
+                                    <option value="">Sem responsável</option>
+                                    {% for usuario in usuarios %}
+                                    <option value="{{usuario.id}}">{{usuario.username}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="button" class="btn btn-success" onclick="updateSubtask({{task.id}})">Salvar</button>
+                                <button type="button" class="btn btn-danger" onclick="deleteSubtask({{task.id}})">Excluir</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- =====================================================
+         MODAL NOVA TAREFA
+    ===================================================== -->
+    <div class="modal fade" id="addTaskModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="{% url 'add_task' board.id %}">
+                    {% csrf_token %}
+                    
+                    <div class="modal-header">
+                        <h5>Nova tarefa</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    
+                    <div class="modal-body">
+                        <input name="titulo" class="form-control mb-3" placeholder="Título" required>
+                        <textarea name="descricao" class="form-control mb-3" placeholder="Descrição"></textarea>
+                        <label class="mb-1">Prioridade</label>
+                        <select name="prioridade" class="form-select mb-3">
+                            <option value="baixa">Baixa</option>
+                            <option value="media" selected>Média</option>
+                            <option value="alta">Alta</option>
+                            <option value="urgente">Urgente</option>
+                        </select>
+                        <label class="mb-1">Responsável</label>
+                        <select name="responsavel" class="form-select mb-3">
+                            <option value="">Sem responsável</option>
+                            {% for usuario in usuarios %}
+                                <option value="{{ usuario.id }}">{{ usuario.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Criar tarefa</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- =====================================================
+         JAVASCRIPT CORRIGIDO
+    ===================================================== -->
+    <script>
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
             }
-        }
-    }
-
-    return cookieValue;
-}
-
-
-const csrftoken = getCookie("csrftoken");
-
-
-
-
-// ===============================
-// SALVAR TAREFA
-// ===============================
-
-function saveTask(taskId) {
-
-
-    const form = document.getElementById(
-        "taskForm" + taskId
-    );
-
-
-    fetch(
-        form.dataset.url,
-        {
-
-            method:"POST",
-
-            headers:{
-                "X-CSRFToken":csrftoken
-            },
-
-            body:new FormData(form)
-
+            return cookieValue;
         }
 
-    )
+        const csrftoken = getCookie("csrftoken");
 
-
-    .then(response=>response.json())
-
-
-    .then(data=>{
-
-
-        if(data.success){
-
-            location.reload();
-
+        // ===============================
+        // SALVAR TAREFA
+        // ===============================
+        function saveTask(taskId) {
+            const form = document.getElementById("taskForm" + taskId);
+            
+            if (!form) {
+                console.error("Form não encontrado para task:", taskId);
+                return;
+            }
+            
+            const formData = new FormData(form);
+            
+            fetch(form.dataset.url, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": csrftoken
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert("Erro ao salvar tarefa");
+                }
+            })
+            .catch(error => {
+                console.error("Erro:", error);
+                alert("Erro ao salvar tarefa");
+            });
         }
 
+        // ===============================
+        // COMENTÁRIOS
+        // ===============================
+        function addComment(taskId) {
+            const input = document.getElementById("comment-input-" + taskId);
+            const texto = input.value.trim();
 
-    });
+            if (!texto) {
+                return;
+            }
 
+            const dados = new FormData();
+            dados.append("comment", texto);
 
-}
-
-
-
-
-
-
-// ===============================
-// COMENTÁRIOS
-// ===============================
-
-function addComment(taskId){
-
-
-    const input =
-    document.getElementById(
-        "comment-input-" + taskId
-    );
-
-
-    const texto =
-    input.value.trim();
-
-
-
-    if(!texto){
-
-        return;
-
-    }
-
-
-
-    const dados = new FormData();
-
-    dados.append(
-        "comment",
-        texto
-    );
-
-
-
-    fetch(
-        `/task/${taskId}/comment/`,
-        {
-
-            method:"POST",
-
-            headers:{
-                "X-CSRFToken":csrftoken
-            },
-
-            body:dados
-
+            fetch(`/task/${taskId}/comment/`, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": csrftoken
+                },
+                body: dados
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const area = document.getElementById("comments-" + taskId);
+                    const div = document.createElement("div");
+                    div.className = "comment-box";
+                    div.innerHTML = `
+                        <strong>${data.username}</strong>
+                        <p>${data.texto}</p>
+                        <small>agora</small>
+                    `;
+                    area.appendChild(div);
+                    input.value = "";
+                }
+            });
         }
 
-    )
+        // ===============================
+        // ABRIR MODAL SUBTAREFA
+        // ===============================
+        function openSubtaskModal(taskId) {
+            // Limpa os campos
+            document.getElementById("subtask-title-" + taskId).value = "";
+            document.getElementById("subtask-prioridade-" + taskId).value = "media";
+            document.getElementById("subtask-responsavel-" + taskId).value = "";
+            
+            const modal = new bootstrap.Modal(document.getElementById("subtaskModal" + taskId));
+            modal.show();
+        }
 
+        // ===============================
+        // SALVAR SUBTAREFA (AJAX)
+        // ===============================
+        function saveSubtask(taskId) {
+            const titulo = document.getElementById("subtask-title-" + taskId).value.trim();
+            if (!titulo) {
+                alert("Digite um título para a subtarefa");
+                return;
+            }
+            
+            const prioridade = document.getElementById("subtask-prioridade-" + taskId).value;
+            const responsavel = document.getElementById("subtask-responsavel-" + taskId).value;
+            
+            const formData = new FormData();
+            formData.append("titulo", titulo);
+            formData.append("prioridade", prioridade);
+            formData.append("responsavel", responsavel);
+            
+            fetch(`/task/${taskId}/add-subtask/`, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": csrftoken,
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Fecha o modal de subtask
+                    const modal = bootstrap.Modal.getInstance(document.getElementById("subtaskModal" + taskId));
+                    modal.hide();
+                    
+                    // Adiciona a subtask na lista sem recarregar a página
+                    adicionarSubtaskNaLista(taskId, data.subtask);
+                    
+                    // Atualiza o contador
+                    const countElement = document.getElementById("subtask-count-" + taskId);
+                    const currentCount = parseInt(countElement.textContent);
+                    countElement.textContent = currentCount + 1;
+                    
+                    // Remove a mensagem "Nenhuma subtarefa" se existir
+                    const noSubtasks = document.getElementById("no-subtasks-" + taskId);
+                    if (noSubtasks) {
+                        noSubtasks.remove();
+                    }
+                } else {
+                    alert("Erro ao criar subtarefa");
+                }
+            })
+            .catch(error => {
+                console.error("Erro:", error);
+                alert("Erro ao criar subtarefa");
+            });
+        }
 
-    .then(response=>response.json())
-
-
-    .then(data=>{
-
-
-        if(data.success){
-
-
-            const area =
-            document.getElementById(
-                "comments-" + taskId
-            );
-
-
-            const div =
-            document.createElement(
-                "div"
-            );
-
-
-            div.className="comment-box";
-
-
-            div.innerHTML=`
-
-            <strong>
-            ${data.username}
-            </strong>
-
-            <p>
-            ${data.texto}
-            </p>
-
-            <small>
-            agora
-            </small>
-
+        // ===============================
+        // ADICIONAR SUBTASK NA LISTA
+        // ===============================
+        function adicionarSubtaskNaLista(taskId, subtask) {
+            const container = document.getElementById("subtasks-container-" + taskId);
+            
+            const div = document.createElement("div");
+            div.className = "border rounded p-2 mb-2 d-flex justify-content-between align-items-center subtask-item";
+            div.id = "subtask-" + subtask.id;
+            div.setAttribute("data-subtask-id", subtask.id);
+            
+            const statusClass = subtask.concluida ? "bg-success" : "bg-warning";
+            const statusText = subtask.concluida ? "Concluída" : "Pendente";
+            
+            div.innerHTML = `
+                <div>
+                    <strong>${subtask.titulo}</strong>
+                    <br>
+                    <small class="text-muted">
+                        <span class="badge ${statusClass}">${statusText}</span>
+                        Prioridade: ${subtask.prioridade_display}
+                        ${subtask.responsavel ? `| 👤 ${subtask.responsavel}` : ''}
+                    </small>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="toggleSubtask(${subtask.id})">
+                        ${subtask.concluida ? '↩' : '✓'}
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditSubtaskModal(${subtask.id})">
+                        ✏️
+                    </button>
+                </div>
             `;
-
-
-            area.appendChild(div);
-
-
-            input.value="";
-
-
+            
+            container.appendChild(div);
         }
 
-
-    });
-
-
-}
-
-
-
-
-
-
-
-// ===============================
-// ABRIR MODAL SUBTAREFA
-// ===============================
-
-
-function openSubtaskModal(taskId){
-
-
-    const tarefa =
-    document.getElementById(
-        "taskModal"+taskId
-    );
-
-
-    const modalTarefa =
-    bootstrap.Modal.getInstance(
-        tarefa
-    );
-
-
-    if(modalTarefa){
-
-        modalTarefa.hide();
-
-    }
-
-
-
-    const subModal =
-    new bootstrap.Modal(
-        document.getElementById(
-            "subtaskModal"+taskId
-        )
-    );
-
-
-    subModal.show();
-
-
-}
-
-
-
-
-
-
-// ===============================
-// SALVAR SUBTAREFA
-// ===============================
-
-function saveSubtask(taskId){
-
-
-
-    const form =
-    document.getElementById(
-        "subtaskForm"+taskId
-    );
-
-
-
-    fetch(
-        form.action,
-        {
-
-            method:"POST",
-
-            headers:{
-                "X-CSRFToken":csrftoken
-            },
-
-            body:new FormData(form)
-
-        }
-
-    )
-
-
-    .then(response=>{
-
-
-        if(response.ok){
-
-
-            const sub =
-            bootstrap.Modal.getInstance(
-                document.getElementById(
-                    "subtaskModal"+taskId
-                )
-            );
-
-
-            sub.hide();
-
-
-
-            setTimeout(()=>{
-
-
-                const tarefa =
-                new bootstrap.Modal(
-                    document.getElementById(
-                        "taskModal"+taskId
-                    )
-                );
-
-
-                tarefa.show();
-
-
-
-            },300);
-
-
-
-        }
-
-
-    });
-
-
-
-}
-
-
-
-
-
-
-
-// ===============================
-// EDITAR SUBTAREFA
-// ===============================
-
-function updateSubtask(id){
-
-
-    const form =
-    document.getElementById(
-        "updateSubtaskForm"+id
-    );
-
-
-
-    fetch(
-        form.action,
-        {
-
-            method:"POST",
-
-            headers:{
-                "X-CSRFToken":csrftoken
-            },
-
-            body:new FormData(form)
-
-        }
-
-    )
-
-
-    .then(response=>{
-
-
-        if(response.ok){
-
-            location.reload();
-
-        }
-
-
-    });
-
-
-
-}
-
-
-
-
-
-
-// ===============================
-// EXCLUIR SUBTAREFA
-// ===============================
-
-
-function deleteSubtask(id){
-
-
-    if(!confirm(
-        "Excluir esta subtarefa?"
-    )){
-
-        return;
-
-    }
-
-
-
-    fetch(
-        `/subtask/${id}/delete/`,
-        {
-
-            method:"POST",
-
-            headers:{
-                "X-CSRFToken":csrftoken
+        // ===============================
+        // ABRIR MODAL EDITAR SUBTASK
+        // ===============================
+        function openEditSubtaskModal(subtaskId) {
+            // Busca os dados da subtask via AJAX
+            // Como temos os dados no HTML, vamos pegar do elemento
+            const subtaskElement = document.getElementById("subtask-" + subtaskId);
+            if (!subtaskElement) return;
+            
+            // Pega a tarefa pai
+            const taskElement = subtaskElement.closest('.modal');
+            const taskId = taskElement ? taskElement.id.replace("taskModal", "") : null;
+            
+            if (!taskId) return;
+            
+            // Pega os dados da subtask do elemento
+            const titulo = subtaskElement.querySelector('strong').textContent;
+            const prioridadeText = subtaskElement.querySelector('.text-muted').textContent;
+            let prioridade = "media";
+            if (prioridadeText.includes("Baixa")) prioridade = "baixa";
+            else if (prioridadeText.includes("Alta")) prioridade = "alta";
+            else if (prioridadeText.includes("Urgente")) prioridade = "urgente";
+            
+            const isConcluida = subtaskElement.querySelector('.badge.bg-success') !== null;
+            
+            let responsavelId = "";
+            const responsavelText = prioridadeText.split("👤");
+            if (responsavelText.length > 1) {
+                // Se tiver responsável, precisa buscar o ID
+                // Vamos fazer uma requisição para pegar os dados completos
             }
-
+            
+            // Preenche o modal de edição
+            document.getElementById("edit-subtask-title-" + taskId).value = titulo;
+            document.getElementById("edit-subtask-prioridade-" + taskId).value = prioridade;
+            document.getElementById("edit-subtask-concluida-" + taskId).value = isConcluida ? "True" : "False";
+            
+            // Busca o responsável via AJAX
+            fetch(`/task/${taskId}/subtasks/`, {
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const subtaskData = data.subtasks.find(s => s.id === subtaskId);
+                    if (subtaskData) {
+                        document.getElementById("edit-subtask-responsavel-" + taskId).value = subtaskData.responsavel_id || "";
+                    }
+                }
+            });
+            
+            // Fecha o modal da tarefa
+            const taskModal = bootstrap.Modal.getInstance(document.getElementById("taskModal" + taskId));
+            if (taskModal) {
+                taskModal.hide();
+            }
+            
+            // Abre o modal de edição
+            const modal = new bootstrap.Modal(document.getElementById("editSubTaskModal" + taskId));
+            modal.show();
+            
+            // Armazena o ID da subtask sendo editada
+            document.getElementById("editSubTaskModal" + taskId).setAttribute("data-editing-subtask", subtaskId);
         }
 
-    )
-
-
-    .then(response=>{
-
-
-        if(response.ok){
-
-            location.reload();
-
+        // ===============================
+        // ATUALIZAR SUBTASK (AJAX)
+        // ===============================
+        function updateSubtask(taskId) {
+            const subtaskId = document.getElementById("editSubTaskModal" + taskId).getAttribute("data-editing-subtask");
+            if (!subtaskId) {
+                alert("Erro: subtask não identificada");
+                return;
+            }
+            
+            const titulo = document.getElementById("edit-subtask-title-" + taskId).value.trim();
+            if (!titulo) {
+                alert("Digite um título para a subtarefa");
+                return;
+            }
+            
+            const prioridade = document.getElementById("edit-subtask-prioridade-" + taskId).value;
+            const concluida = document.getElementById("edit-subtask-concluida-" + taskId).value;
+            const responsavel = document.getElementById("edit-subtask-responsavel-" + taskId).value;
+            
+            const formData = new FormData();
+            formData.append("titulo", titulo);
+            formData.append("prioridade", prioridade);
+            formData.append("concluida", concluida);
+            formData.append("responsavel", responsavel);
+            
+            fetch(`/subtask/${subtaskId}/update/`, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": csrftoken,
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Fecha o modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById("editSubTaskModal" + taskId));
+                    modal.hide();
+                    
+                    // Atualiza a subtask na lista
+                    atualizarSubtaskNaLista(taskId, data.subtask);
+                    
+                    // Reabre o modal da tarefa
+                    setTimeout(() => {
+                        const taskModal = new bootstrap.Modal(document.getElementById("taskModal" + taskId));
+                        taskModal.show();
+                    }, 300);
+                } else {
+                    alert("Erro ao atualizar subtarefa");
+                }
+            })
+            .catch(error => {
+                console.error("Erro:", error);
+                alert("Erro ao atualizar subtarefa");
+            });
         }
 
-
-    });
-
-
-
-}
-
-
-
-
-
-
-// ===============================
-// EXCLUIR TAREFA
-// ===============================
-
-
-function deleteTask(id){
-
-
-    if(!confirm(
-        "Deseja excluir esta tarefa?"
-    )){
-
-        return;
-
-    }
-
-
-
-    window.location.href =
-    `/task/${id}/delete/`;
-
-
-}
-
-
-
-
-
-// ===============================
-// QUANDO SUBMODAL FECHAR
-// VOLTA PARA TAREFA
-// ===============================
-
-
-document.querySelectorAll(
-    "[id^='subtaskModal']"
-)
-
-.forEach(modal=>{
-
-
-    modal.addEventListener(
-        "hidden.bs.modal",
-        function(){
-
-
-            const id =
-            this.id.replace(
-                "subtaskModal",
-                ""
-            );
-
-
-
-            const tarefa =
-            new bootstrap.Modal(
-                document.getElementById(
-                    "taskModal"+id
-                )
-            );
-
-
-            tarefa.show();
-
-
-
+        // ===============================
+        // ATUALIZAR SUBTASK NA LISTA
+        // ===============================
+        function atualizarSubtaskNaLista(taskId, subtask) {
+            const element = document.getElementById("subtask-" + subtask.id);
+            if (!element) return;
+            
+            const statusClass = subtask.concluida ? "bg-success" : "bg-warning";
+            const statusText = subtask.concluida ? "Concluída" : "Pendente";
+            
+            element.innerHTML = `
+                <div>
+                    <strong>${subtask.titulo}</strong>
+                    <br>
+                    <small class="text-muted">
+                        <span class="badge ${statusClass}">${statusText}</span>
+                        Prioridade: ${subtask.prioridade_display}
+                        ${subtask.responsavel ? `| 👤 ${subtask.responsavel}` : ''}
+                    </small>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="toggleSubtask(${subtask.id})">
+                        ${subtask.concluida ? '↩' : '✓'}
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditSubtaskModal(${subtask.id})">
+                        ✏️
+                    </button>
+                </div>
+            `;
+            
+            if (subtask.concluida) {
+                element.classList.add("subtask-concluida");
+            } else {
+                element.classList.remove("subtask-concluida");
+            }
         }
 
-    );
+        // ===============================
+        // TOGGLE SUBTASK
+        // ===============================
+        function toggleSubtask(subtaskId) {
+            fetch(`/subtask/${subtaskId}/toggle/`, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": csrftoken
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error("Erro:", error);
+                alert("Erro ao alternar subtarefa");
+            });
+        }
 
+        // ===============================
+        // EXCLUIR SUBTASK
+        // ===============================
+        function deleteSubtask(taskId) {
+            const subtaskId = document.getElementById("editSubTaskModal" + taskId).getAttribute("data-editing-subtask");
+            if (!subtaskId) {
+                alert("Erro: subtask não identificada");
+                return;
+            }
+            
+            if (!confirm("Excluir esta subtarefa?")) {
+                return;
+            }
+            
+            fetch(`/subtask/${subtaskId}/delete/`, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": csrftoken
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Fecha o modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById("editSubTaskModal" + taskId));
+                    modal.hide();
+                    
+                    // Remove o elemento da lista
+                    const element = document.getElementById("subtask-" + subtaskId);
+                    if (element) {
+                        element.remove();
+                    }
+                    
+                    // Atualiza o contador
+                    const countElement = document.getElementById("subtask-count-" + taskId);
+                    const currentCount = parseInt(countElement.textContent);
+                    countElement.textContent = currentCount - 1;
+                    
+                    // Se não tiver mais subtasks, mostra a mensagem
+                    const container = document.getElementById("subtasks-container-" + taskId);
+                    if (container.children.length === 0) {
+                        const p = document.createElement("p");
+                        p.className = "text-muted";
+                        p.id = "no-subtasks-" + taskId;
+                        p.textContent = "Nenhuma subtarefa";
+                        container.appendChild(p);
+                    }
+                    
+                    // Reabre o modal da tarefa
+                    setTimeout(() => {
+                        const taskModal = new bootstrap.Modal(document.getElementById("taskModal" + taskId));
+                        taskModal.show();
+                    }, 300);
+                }
+            })
+            .catch(error => {
+                console.error("Erro:", error);
+                alert("Erro ao excluir subtarefa");
+            });
+        }
 
-});
+        // ===============================
+        // EXCLUIR TAREFA
+        // ===============================
+        function deleteTask(id) {
+            if (!confirm("Deseja excluir esta tarefa?")) {
+                return;
+            }
+            window.location.href = `/task/${id}/delete/`;
+        }
 
-
-
-</script>
-
-
+        // ===============================
+        // QUANDO MODAL DE SUBTASK FECHAR
+        // ===============================
+        document.addEventListener('hidden.bs.modal', function(event) {
+            const modalId = event.target.id;
+            
+            // Quando o modal de criar subtask fechar
+            if (modalId && modalId.startsWith('subtaskModal')) {
+                const taskId = modalId.replace('subtaskModal', '');
+                // Reabre o modal da tarefa
+                const taskModal = new bootstrap.Modal(document.getElementById('taskModal' + taskId));
+                taskModal.show();
+            }
+            
+            // Quando o modal de editar subtask fechar
+            if (modalId && modalId.startsWith('editSubTaskModal')) {
+                const taskId = modalId.replace('editSubTaskModal', '');
+                // Verifica se não tem outro modal aberto
+                const openModals = document.querySelectorAll('.modal.show');
+                if (openModals.length === 0) {
+                    // Reabre o modal da tarefa
+                    const taskModal = new bootstrap.Modal(document.getElementById('taskModal' + taskId));
+                    taskModal.show();
+                }
+            }
+        });
+    </script>
 </body>
-
 </html>
