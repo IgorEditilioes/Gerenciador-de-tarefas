@@ -59,11 +59,16 @@ def check_permission_user_board(user, board):
     if user.tipo == 'admin':
         return True
     
-    # Gerente e Usuário só acessam boards do seu workspace
-    if user.workspace != board.workspace:
-        return False
+    # Gerente acessa boards do seu workspace
+    if user.tipo == 'gerente':
+        return user.workspace == board.workspace
     
-    return True
+    # Usuário comum: verifica se é membro do board
+    if user.tipo == 'usuario':
+        from .models import BoardMember
+        return BoardMember.objects.filter(board=board, usuario=user).exists()
+    
+    return False
 
 
 def check_permission_edit_task(user, task):

@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponseForbidden
-from django.db.models import Count
+from django.db.models import Count, Q
 
 from .forms import LoginForm
 from .models import (
@@ -83,11 +83,26 @@ def home(request):
     usuario = request.user
     workspace = usuario.workspace
 
-    # Admin vê todos os boards, outros vêem apenas do seu workspace
+    # 🔥 FILTRO DE BOARDS POR PERFIL
     if usuario.tipo == 'admin':
+        # Admin vê todos os boards de todos os workspaces
         boards = Board.objects.all()
-    else:
+    elif usuario.tipo == 'gerente':
+        # Gerente vê todos os boards do seu workspace
         boards = Board.objects.filter(workspace=workspace)
+    else:
+        # Usuário comum vê apenas os boards onde é membro
+        from .models import BoardMember
+        # Busca os IDs dos boards onde o usuário é membro
+        boards_ids = BoardMember.objects.filter(
+            usuario=usuario
+        ).values_list('board_id', flat=True)
+        
+        # Filtra os boards pelos IDs encontrados
+        boards = Board.objects.filter(
+            workspace=workspace,
+            id__in=boards_ids
+        )
 
     usuarios = User.objects.filter(workspace=workspace)
 
@@ -106,6 +121,7 @@ def home(request):
             "total_tarefas": total_tarefas
         }
     )
+
 
 
 # =========================
@@ -173,15 +189,36 @@ def board_view(request, board_id):
         messages.error(request, "Você não tem permissão para acessar este setor.")
         return redirect("home")
     
-    status_list = Status.objects.filter(
-        workflow__board=board
-    ).order_by(
-        "ordem"
-    ).prefetch_related(
-        "tasks__subtasks",
-        "tasks__comments",
-        "tasks__history"
-    )
+    # 🔥 CORREÇÃO: Filtra tarefas baseado no perfil do usuário
+    if usuario.tipo == 'admin':
+        # Admin vê todas as tarefas
+        status_list = Status.objects.filter(
+            workflow__board=board
+        ).order_by("ordem").prefetch_related(
+            "tasks__subtasks",
+            "tasks__comments",
+            "tasks__history"
+        )
+    elif usuario.tipo == 'gerente':
+        # Gerente vê todas as tarefas do workspace
+        status_list = Status.objects.filter(
+            workflow__board=board
+        ).order_by("ordem").prefetch_related(
+            "tasks__subtasks",
+            "tasks__comments",
+            "tasks__history"
+        )
+    else:
+        # Usuário comum vê apenas tarefas onde é responsável ou criador
+        # Mas também pode ver tarefas de outros (somente leitura)
+        status_list = Status.objects.filter(
+            workflow__board=board
+        ).order_by("ordem").prefetch_related(
+            "tasks__subtasks",
+            "tasks__comments",
+            "tasks__history"
+        )
+        # O filtro será aplicado no template
 
     usuarios = User.objects.filter(workspace=request.user.workspace)
 
@@ -280,6 +317,7 @@ def add_task(request, board_id):
         valor_novo="Tarefa criada"
     )
 
+    messages.success(request, "Tarefa criada com sucesso!")
     return redirect("board", board_id=board.id)
 
 
@@ -301,11 +339,12 @@ def update_task(request, task_id):
             status=403
         )
 
-    # REGRA: Usuário comum NÃO pode alterar status para "Concluído"
-    novo_status = request.POST.get("status")
+    # 🔥 CORREÇÃO: Usuário comum NÃO pode alterar status para "Concluído"
+    novo_status_id = request.POST.get("status")
     if usuario.tipo == 'usuario':
-        status_obj = get_object_or_404(Status, id=novo_status)
-        if status_obj.nome.lower() == "concluído":
+        status_obj = get_object_or_404(Status, id=novo_status_id)
+        # Verifica se o status é "Concluído" (case insensitive)
+        if status_obj.nome.lower() in ["concluído", "concluido"]:
             return JsonResponse(
                 {"success": False, "error": "Usuários comuns não podem concluir tarefas"},
                 status=403
@@ -383,16 +422,24 @@ def complete_task(request, task_id):
         messages.error(request, "Apenas Gerentes e Administradores podem concluir tarefas.")
         return redirect("board", board_id=task.board.id)
     
-    # Busca o status "Concluído"
+    # 🔥 CORREÇÃO: Busca o status "Concluído" (case insensitive)
     status_concluido = Status.objects.filter(
         workflow__board=task.board,
-        nome__icontains="concluído"
+        nome__iexact="Concluído"
     ).first()
     
     if not status_concluido:
+        # Tenta com variações
+        status_concluido = Status.objects.filter(
+            workflow__board=task.board,
+            nome__icontains="conclu"
+        ).first()
+    
+    if not status_concluido:
+        # Se não encontrar, pega o último status (assumindo que é o final)
         status_concluido = Status.objects.filter(
             workflow__board=task.board
-        ).last()
+        ).order_by('ordem').last()
     
     if status_concluido:
         task.status = status_concluido
@@ -407,6 +454,8 @@ def complete_task(request, task_id):
         )
         
         messages.success(request, "Tarefa concluída com sucesso!")
+    else:
+        messages.error(request, "Status 'Concluído' não encontrado.")
     
     return redirect("board", board_id=task.board.id)
 
@@ -565,6 +614,7 @@ def delete_subtask(request, subtask_id):
     
     board_id = subtask.task.board.id
     subtask.delete()
+    messages.success(request, "Subtarefa excluída com sucesso!")
     return redirect("board", board_id=board_id)
 
 

@@ -119,12 +119,17 @@
         ===================================================== -->
         <div class="section-header">
             <h2>
-                <i class="fas fa-columns"></i> Seus Setores
+                <i class="fas fa-columns"></i> 
+                {% if user.tipo == 'usuario' %}
+                    Meus Setores
+                {% else %}
+                    Seus Setores
+                {% endif %}
                 <span style="font-size:14px; font-weight:400; color:#6b7280; margin-left:10px;">
                     ({{ boards|length }})
                 </span>
             </h2>
-            {% if user.tipo == 'gerente' %}
+            {% if user.tipo == 'gerente' or user.tipo == 'admin' %}
             <button class="btn-create-board" data-bs-toggle="modal" data-bs-target="#createBoardModal">
                 <i class="fas fa-plus"></i> Novo Setor
             </button>
@@ -149,6 +154,11 @@
                     <span>
                         <i class="fas fa-calendar-alt"></i> {{ board.criado_em|date:"d/m/Y" }}
                     </span>
+                    {% if user.tipo == 'usuario' %}
+                    <span class="badge bg-info" style="font-size:10px;">
+                        <i class="fas fa-user-check"></i> Membro
+                    </span>
+                    {% endif %}
                 </div>
                 
                 <div class="board-footer">
@@ -167,14 +177,26 @@
         <!-- Estado vazio -->
         <div class="empty-state">
             <i class="fas fa-folder-open"></i>
-            <h4>Nenhum setor criado ainda</h4>
+            <h4>
+                {% if user.tipo == 'usuario' %}
+                    Você não pertence a nenhum setor
+                {% else %}
+                    Nenhum setor criado ainda
+                {% endif %}
+            </h4>
             <p>
-                Comece organizando seu trabalho! Crie seu primeiro setor 
-                para começar a gerenciar suas tarefas.
+                {% if user.tipo == 'usuario' %}
+                    Aguarde um gerente ou administrador te adicionar a um setor para começar a trabalhar.
+                {% else %}
+                    Comece organizando seu trabalho! Crie seu primeiro setor 
+                    para começar a gerenciar suas tarefas.
+                {% endif %}
             </p>
+            {% if user.tipo == 'gerente' or user.tipo == 'admin' %}
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBoardModal">
                 <i class="fas fa-plus me-1"></i> Criar setor
             </button>
+            {% endif %}
         </div>
         {% endif %}
 
