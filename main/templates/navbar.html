@@ -1,6 +1,9 @@
+<!-- navbar.html -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
-        <a class="navbar-brand fw-bold" href="{% url 'home' %}">Gerenciador</a>
+        <a class="navbar-brand fw-bold" href="{% url 'home' %}">
+            <i class="fas fa-tasks"></i> Gerenciador
+        </a>
 
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu">
             <span class="navbar-toggler-icon"></span>
@@ -9,21 +12,37 @@
         <div class="collapse navbar-collapse" id="menu">
             <ul class="navbar-nav ms-auto">
 
+
+                
+                <!-- Dropdown do Usuário -->
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        Olá, <strong>{{ user.username }}</strong>
+                        <i class="fas fa-user-circle"></i>
+                        Olá, <strong>{{ user.get_full_name|default:user.username }}</strong>
                     </a>
 
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="#">Meu perfil</a></li>
                         <li>
-                            <hr class="dropdown-divider">
+                            <a class="dropdown-item {% if request.resolver_match.url_name == 'perfil' %}active{% endif %}" 
+                               href="{% url 'perfil' user.id %}">
+                                <i class="fas fa-user-edit"></i> Meu perfil
+                            </a>
                         </li>
-                        <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">Sair</a></li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'perfil' user.id %}#tab-senha">
+                                <i class="fas fa-lock"></i> Alterar Senha
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="{% url 'logout' %}">
+                                <i class="fas fa-sign-out-alt"></i> Sair
+                            </a>
+                        </li>
                     </ul>
                 </li>
-
             </ul>
         </div>
     </div>
 </nav>
+

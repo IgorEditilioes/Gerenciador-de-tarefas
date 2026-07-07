@@ -1,0 +1,745 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Perfil - {{ user.get_full_name|default:user.username }}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- CSS do Perfil -->
+    <link rel="stylesheet" href="{% static 'css/perfil.css' %}">
+    
+    <style>
+        body {
+            display: block !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .perfil-wrapper {
+            padding: 20px 0;
+            min-height: calc(100vh - 56px);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============ NAVBAR ============ -->
+    {% include 'navbar.html' %}
+
+    <!-- ============ CONTEÚDO PRINCIPAL ============ -->
+    <div class="perfil-wrapper">
+        <div class="profile-container">
+            <div class="profile-card">
+                <!-- Header do Perfil -->
+                <div class="profile-header">
+                    <div class="avatar-container">
+                        {% if user.avatar %}
+                            <img src="{{ user.avatar.url }}" alt="Avatar" id="avatarPreview">
+                        {% else %}
+                            <img src="https://ui-avatars.com/api/?name={{ user.get_full_name|default:user.username }}&size=120&background=667eea&color=fff" alt="Avatar" id="avatarPreview">
+                        {% endif %}
+                        <button class="avatar-edit-btn" title="Alterar foto" id="avatarEditBtn">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                        <input type="file" id="avatarInput" accept="image/*" style="display:none">
+                        <input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+                    </div>
+                    <h2 id="userNameDisplay">{{ user.get_full_name|default:user.username }}</h2>
+                    <p class="user-email" id="userEmailDisplay">{{ user.email }}</p>
+                    <p class="user-member-since">
+                        <i class="fas fa-calendar-alt"></i> 
+                        Membro desde: {{ user.date_joined|date:"d/m/Y" }}
+                    </p>
+                </div>
+
+                <!-- Formulário de Edição -->
+                <form id="profileForm" class="profile-form" method="post" action="{% url 'perfil' user.id %}">
+                    {% csrf_token %}
+                    
+                    <!-- Exibir mensagens do Django -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <!-- Abas -->
+                    <div class="tabs">
+                        <button type="button" class="tab-btn active" data-tab="dados">
+                            <i class="fas fa-user"></i> Dados Pessoais
+                        </button>
+                        <button type="button" class="tab-btn" data-tab="senha">
+                            <i class="fas fa-lock"></i> Alterar Senha
+                        </button>
+                    </div>
+
+                    <!-- ============================================ -->
+                    <!-- ABA: DADOS PESSOAIS -->
+                    <!-- ============================================ -->
+                    <div class="tab-content active" id="tab-dados">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="id_first_name">
+                                        <i class="fas fa-user"></i> Nome
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" id="id_first_name" name="first_name" 
+                                           placeholder="Seu nome" 
+                                           value="{{ form.first_name.value|default:user.first_name }}"
+                                           class="form-control {% if form.first_name.errors %}is-invalid{% endif %}">
+                                    {% if form.first_name.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.first_name.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="id_last_name">
+                                        <i class="fas fa-user"></i> Sobrenome
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" id="id_last_name" name="last_name" 
+                                           placeholder="Seu sobrenome" 
+                                           value="{{ form.last_name.value|default:user.last_name }}"
+                                           class="form-control {% if form.last_name.errors %}is-invalid{% endif %}">
+                                    {% if form.last_name.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.last_name.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">
+                                <i class="fas fa-envelope"></i> E-mail
+                            </label>
+                            <input type="email" id="email" class="form-control" 
+                                   value="{{ user.email }}" disabled>
+                            <small class="form-text text-muted">O e-mail não pode ser alterado.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="telefone">
+                                <i class="fas fa-phone"></i> Telefone
+                            </label>
+                            <input type="tel" id="telefone" name="telefone" 
+                                   class="form-control"
+                                   placeholder="(00) 00000-0000" 
+                                   value="{{ user.telefone|default:'' }}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="dataNascimento">
+                                <i class="fas fa-calendar-alt"></i> Data de nascimento
+                            </label>
+                            <input type="date" id="dataNascimento" name="data_nascimento" 
+                                   class="form-control"
+                                   value="{{ user.data_nascimento|date:'Y-m-d'|default:'' }}">
+                        </div>
+                    </div>
+
+                    <!-- ============================================ -->
+                    <!-- ABA: ALTERAR SENHA -->
+                    <!-- ============================================ -->
+                    <div class="tab-content" id="tab-senha">
+                        <div class="security-info">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Mantenha sua senha segura e atualizada</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="id_senha_atual">
+                                <i class="fas fa-key"></i> Senha atual
+                                <span class="text-danger">*</span>
+                            </label>
+                            <div class="password-input-group">
+                                <input type="password" id="id_senha_atual" name="senha_atual" 
+                                       class="form-control {% if form.senha_atual.errors %}is-invalid{% endif %}"
+                                       placeholder="Digite sua senha atual">
+                                <button type="button" class="toggle-password" data-target="id_senha_atual">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            {% if form.senha_atual.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.senha_atual.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="id_nova_senha">
+                                <i class="fas fa-lock"></i> Nova senha
+                                <span class="text-danger">*</span>
+                            </label>
+                            <div class="password-input-group">
+                                <input type="password" id="id_nova_senha" name="nova_senha" 
+                                       class="form-control {% if form.nova_senha.errors %}is-invalid{% endif %}"
+                                       placeholder="Digite a nova senha">
+                                <button type="button" class="toggle-password" data-target="id_nova_senha">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <!-- Indicador de força da senha -->
+                            <div class="password-strength">
+                                <div class="strength-bar">
+                                    <div class="strength-progress" id="strengthProgress" style="width: 0%"></div>
+                                </div>
+                                <span class="strength-text" id="strengthText">Força da senha</span>
+                            </div>
+                            {% if form.nova_senha.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.nova_senha.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="id_confirmar_senha">
+                                <i class="fas fa-check-circle"></i> Confirmar nova senha
+                                <span class="text-danger">*</span>
+                            </label>
+                            <div class="password-input-group">
+                                <input type="password" id="id_confirmar_senha" name="confirmar_senha" 
+                                       class="form-control {% if form.confirmar_senha.errors %}is-invalid{% endif %}"
+                                       placeholder="Confirme a nova senha">
+                                <button type="button" class="toggle-password" data-target="id_confirmar_senha">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            {% if form.confirmar_senha.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.confirmar_senha.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Requisitos de senha -->
+                        <div class="password-requirements">
+                            <p><i class="fas fa-info-circle"></i> A senha deve conter:</p>
+                            <ul>
+                                <li id="req-length" class="requirement unmet">
+                                    <i class="fas fa-circle"></i> Mínimo 8 caracteres
+                                </li>
+                                <li id="req-upper" class="requirement unmet">
+                                    <i class="fas fa-circle"></i> Pelo menos 1 letra maiúscula
+                                </li>
+                                <li id="req-lower" class="requirement unmet">
+                                    <i class="fas fa-circle"></i> Pelo menos 1 letra minúscula
+                                </li>
+                                <li id="req-number" class="requirement unmet">
+                                    <i class="fas fa-circle"></i> Pelo menos 1 número
+                                </li>
+                                <li id="req-special" class="requirement unmet">
+                                    <i class="fas fa-circle"></i> Pelo menos 1 caractere especial
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- ============================================ -->
+                    <!-- BOTÕES DE AÇÃO -->
+                    <!-- ============================================ -->
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="cancelBtn">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="fas fa-save"></i> Salvar alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // ============ ELEMENTOS DO DOM ============
+        const form = document.getElementById('profileForm');
+        const tabs = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const togglePasswordBtns = document.querySelectorAll('.toggle-password');
+        const novaSenha = document.getElementById('id_nova_senha');
+        const confirmarSenha = document.getElementById('id_confirmar_senha');
+        const strengthProgress = document.getElementById('strengthProgress');
+        const strengthText = document.getElementById('strengthText');
+        const avatarInput = document.getElementById('avatarInput');
+        const avatarPreview = document.getElementById('avatarPreview');
+        const avatarEditBtn = document.getElementById('avatarEditBtn');
+        const csrfToken = document.getElementById('csrfToken')?.value || '{{ csrf_token }}';
+        const userId = {{ user.id }};
+
+        // ============ TABS ============
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(tc => tc.classList.remove('active'));
+
+                this.classList.add('active');
+                const tabId = this.dataset.tab;
+                document.getElementById(`tab-${tabId}`).classList.add('active');
+            });
+        });
+
+        // Verificar se veio com a tab de senha ativa (via URL)
+        if (window.location.hash === '#tab-senha') {
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(tc => tc.classList.remove('active'));
+            document.querySelector('[data-tab="senha"]').classList.add('active');
+            document.getElementById('tab-senha').classList.add('active');
+        }
+
+        // ============ TOGGLE PASSWORD ============
+        togglePasswordBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const targetId = this.dataset.target;
+                const input = document.getElementById(targetId);
+                const icon = this.querySelector('i');
+
+                if (input) {
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        icon.classList.remove('fa-eye');
+                        icon.classList.add('fa-eye-slash');
+                    } else {
+                        input.type = 'password';
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                    }
+                }
+            });
+        });
+
+        // ============ FORÇA DA SENHA ============
+        function checkPasswordStrength(password) {
+            let strength = 0;
+            const requirements = {
+                length: password.length >= 8,
+                upper: /[A-Z]/.test(password),
+                lower: /[a-z]/.test(password),
+                number: /[0-9]/.test(password),
+                special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+            };
+
+            // Atualizar requisitos visuais
+            const reqIds = ['req-length', 'req-upper', 'req-lower', 'req-number', 'req-special'];
+            const reqKeys = ['length', 'upper', 'lower', 'number', 'special'];
+            
+            reqIds.forEach((id, index) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.className = `requirement ${requirements[reqKeys[index]] ? 'met' : 'unmet'}`;
+                    const icon = element.querySelector('i');
+                    if (icon) {
+                        icon.className = requirements[reqKeys[index]] ? 'fas fa-check-circle' : 'fas fa-circle';
+                    }
+                }
+            });
+
+            // Calcular força
+            if (requirements.length) strength++;
+            if (requirements.upper) strength++;
+            if (requirements.lower) strength++;
+            if (requirements.number) strength++;
+            if (requirements.special) strength++;
+
+            const strengthMap = {
+                0: { width: '0%', color: '#fc8181', text: 'Muito fraca' },
+                1: { width: '20%', color: '#fc8181', text: 'Fraca' },
+                2: { width: '40%', color: '#f6ad55', text: 'Média' },
+                3: { width: '60%', color: '#f6ad55', text: 'Boa' },
+                4: { width: '80%', color: '#68d391', text: 'Forte' },
+                5: { width: '100%', color: '#48bb78', text: 'Muito forte' }
+            };
+
+            const result = strengthMap[strength] || strengthMap[0];
+            if (strengthProgress) {
+                strengthProgress.style.width = result.width;
+                strengthProgress.style.background = result.color;
+            }
+            if (strengthText) {
+                strengthText.textContent = `Força: ${result.text}`;
+                strengthText.style.color = result.color;
+            }
+
+            return requirements;
+        }
+
+        if (novaSenha) {
+            novaSenha.addEventListener('input', function() {
+                checkPasswordStrength(this.value);
+            });
+        }
+
+        // ============ VALIDAÇÃO DE SENHAS ============
+        function validatePasswords() {
+            const nova = novaSenha ? novaSenha.value : '';
+            const confirmar = confirmarSenha ? confirmarSenha.value : '';
+
+            if (nova && confirmar && nova !== confirmar) {
+                if (confirmarSenha) {
+                    confirmarSenha.setCustomValidity('As senhas não coincidem');
+                    confirmarSenha.style.borderColor = '#fc8181';
+                }
+                return false;
+            } else {
+                if (confirmarSenha) {
+                    confirmarSenha.setCustomValidity('');
+                    confirmarSenha.style.borderColor = '';
+                }
+                return true;
+            }
+        }
+
+        if (confirmarSenha) {
+            confirmarSenha.addEventListener('input', validatePasswords);
+        }
+        if (novaSenha) {
+            novaSenha.addEventListener('input', function() {
+                if (confirmarSenha && confirmarSenha.value) {
+                    validatePasswords();
+                }
+            });
+        }
+
+        // ============ AVATAR ============
+        if (avatarEditBtn && avatarInput) {
+            avatarEditBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                avatarInput.click();
+            });
+
+            avatarInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const formData = new FormData();
+                    formData.append('avatar', file);
+                    formData.append('csrfmiddlewaretoken', csrfToken);
+
+                    if (avatarPreview) {
+                        avatarPreview.style.opacity = '0.5';
+                    }
+                    
+                    fetch(`/perfil/${userId}/avatar/`, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (avatarPreview) {
+                            avatarPreview.style.opacity = '1';
+                        }
+                        if (data.success) {
+                            if (avatarPreview) {
+                                avatarPreview.src = data.avatar_url + '?t=' + new Date().getTime();
+                            }
+                            showToast('Avatar atualizado com sucesso!', 'success');
+                        } else {
+                            showToast(data.message || 'Erro ao atualizar avatar', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        if (avatarPreview) {
+                            avatarPreview.style.opacity = '1';
+                        }
+                        console.error('Erro:', error);
+                        showToast('Erro ao fazer upload do avatar', 'error');
+                    });
+                }
+            });
+        }
+
+        // ============ SUBMIT DO FORMULÁRIO ============
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                if (!validatePasswords()) {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(tc => tc.classList.remove('active'));
+                    document.querySelector('[data-tab="senha"]')?.classList.add('active');
+                    document.getElementById('tab-senha')?.classList.add('active');
+                    showToast('Por favor, corrija os erros no formulário.', 'error');
+                    return;
+                }
+
+                const formData = new FormData(form);
+                const submitBtn = document.getElementById('submitBtn');
+                const originalText = submitBtn ? submitBtn.innerHTML : 'Salvar';
+                
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+                    submitBtn.disabled = true;
+                }
+
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': csrfToken
+                    }
+                })
+                .then(response => {
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        return response.json();
+                    }
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                        return null;
+                    }
+                    throw new Error('Resposta não é JSON');
+                })
+                .then(data => {
+                    if (submitBtn) {
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                    }
+                    
+                    if (data && data.success) {
+                        showToast(data.message || 'Perfil atualizado com sucesso!', 'success');
+                        
+                        const firstName = document.getElementById('id_first_name')?.value || '';
+                        const lastName = document.getElementById('id_last_name')?.value || '';
+                        const nomeCompleto = firstName + ' ' + lastName;
+                        const userNameDisplay = document.getElementById('userNameDisplay');
+                        if (userNameDisplay) {
+                            userNameDisplay.textContent = nomeCompleto.trim() || 'Usuário';
+                        }
+                        
+                        // Limpar campos de senha
+                        const senhaAtual = document.getElementById('id_senha_atual');
+                        const novaSenhaInput = document.getElementById('id_nova_senha');
+                        const confirmarSenhaInput = document.getElementById('id_confirmar_senha');
+                        
+                        if (senhaAtual) senhaAtual.value = '';
+                        if (novaSenhaInput) novaSenhaInput.value = '';
+                        if (confirmarSenhaInput) confirmarSenhaInput.value = '';
+                        
+                        if (strengthProgress) {
+                            strengthProgress.style.width = '0%';
+                            strengthProgress.style.background = '';
+                        }
+                        if (strengthText) {
+                            strengthText.textContent = 'Força da senha';
+                            strengthText.style.color = '';
+                        }
+                        
+                        document.querySelectorAll('.requirement').forEach(req => {
+                            req.className = 'requirement unmet';
+                            const icon = req.querySelector('i');
+                            if (icon) {
+                                icon.className = 'fas fa-circle';
+                            }
+                        });
+                        
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                        
+                    } else if (data) {
+                        if (data.errors) {
+                            Object.keys(data.errors).forEach(field => {
+                                const fieldElement = document.getElementById(`id_${field}`);
+                                if (fieldElement) {
+                                    fieldElement.classList.add('is-invalid');
+                                    const feedback = fieldElement.parentElement.querySelector('.invalid-feedback');
+                                    if (feedback) {
+                                        feedback.textContent = data.errors[field].join(', ');
+                                    }
+                                }
+                            });
+                        }
+                        showToast(data.message || 'Erro ao salvar alterações', 'error');
+                    }
+                })
+                .catch(error => {
+                    if (submitBtn) {
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                    }
+                    console.error('Erro detalhado:', error);
+                    showToast('Erro ao processar requisição.', 'error');
+                });
+            });
+        }
+
+        // ============ BOTÃO CANCELAR ============
+        const cancelBtn = document.getElementById('cancelBtn');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function() {
+                if (confirm('Tem certeza que deseja cancelar? As alterações não serão salvas.')) {
+                    window.location.href = "{% url 'home' %}";
+                }
+            });
+        }
+
+        // ============ TOAST NOTIFICATION ============
+        function showToast(message, type = 'success') {
+            const oldToast = document.querySelector('.toast-notification');
+            if (oldToast) oldToast.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+            
+            const colors = {
+                success: '#48bb78',
+                error: '#fc8181',
+                warning: '#f6ad55',
+                info: '#4299e1'
+            };
+            
+            toast.innerHTML = `
+                <i class="fas ${icons[type] || icons.info}"></i>
+                <span>${message}</span>
+                <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+            `;
+            
+            toast.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                padding: 15px 25px;
+                border-radius: 10px;
+                color: white;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                z-index: 9999;
+                animation: slideInRight 0.3s ease;
+                background: ${colors[type] || colors.info};
+                max-width: 400px;
+                min-width: 250px;
+            `;
+
+            const closeBtn = toast.querySelector('.toast-close');
+            if (closeBtn) {
+                closeBtn.style.cssText = `
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 1.5rem;
+                    cursor: pointer;
+                    padding: 0 0 0 15px;
+                    opacity: 0.8;
+                    transition: opacity 0.3s ease;
+                `;
+                closeBtn.addEventListener('mouseover', () => {
+                    closeBtn.style.opacity = '1';
+                });
+                closeBtn.addEventListener('mouseout', () => {
+                    closeBtn.style.opacity = '0.8';
+                });
+            }
+
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.style.opacity = '0';
+                    toast.style.transition = 'opacity 0.3s ease';
+                    setTimeout(() => {
+                        if (toast.parentElement) toast.remove();
+                    }, 300);
+                }
+            }, 5000);
+        }
+
+        // ============ MÁSCARA PARA TELEFONE ============
+        const telefoneInput = document.getElementById('telefone');
+        if (telefoneInput) {
+            telefoneInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 11) value = value.slice(0, 11);
+                if (value.length > 2) {
+                    value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+                }
+                if (value.length > 10) {
+                    value = value.slice(0, 10) + '-' + value.slice(10);
+                }
+                e.target.value = value;
+            });
+        }
+
+        // ============ ESTILOS ADICIONAIS ============
+        const style = document.createElement('style');
+        style.textContent = `
+            .toast-notification {
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                z-index: 9999;
+                animation: slideInRight 0.3s ease;
+            }
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            .toast-close:hover {
+                opacity: 1 !important;
+            }
+        `;
+        document.head.appendChild(style);
+
+        console.log('Perfil carregado para usuário: {{ user.username }}');
+    });
+    </script>
+</body>
+</html>

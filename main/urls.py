@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     home,
+    perfil,
     login_view,
     logout_view,
     board_view,
@@ -54,4 +55,10 @@ urlpatterns = [
     # COMENTÁRIOS
     # ======================
     path("task/<int:task_id>/comment/", add_comment, name="add_comment"),
+
+
+    # ======================
+    # Perfil
+    # ======================
+    path('perfil/<int:id>', perfil, name="perfil")
 ]

@@ -1,11 +1,18 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponseForbidden
+from django.views.decorators.http import require_http_methods
 from django.db.models import Count, Q
 
-from .forms import LoginForm
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+import json
+from .forms import PerfilForm
+
+from .forms import LoginForm, PerfilForm
 from .models import (
     User,
     Task,
@@ -122,6 +129,106 @@ def home(request):
         }
     )
 
+
+@login_required
+@require_http_methods(["POST"])
+def atualizar_avatar(request, id):
+    """
+    View para atualizar o avatar do usuário via AJAX
+    """
+    try:
+        usuario = get_object_or_404(User, id=id)
+        
+        # Verificar permissão
+        if request.user.id != usuario.id:
+            return JsonResponse({
+                'success': False,
+                'message': 'Permissão negada.'
+            }, status=403)
+        
+        if request.FILES.get('avatar'):
+            # Salvar o avatar (assumindo que você tem um campo avatar no modelo)
+            usuario.avatar = request.FILES['avatar']
+            usuario.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Avatar atualizado com sucesso!',
+                'avatar_url': usuario.avatar.url
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Nenhum arquivo enviado.'
+            }, status=400)
+            
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao salvar avatar: {str(e)}'
+        }, status=500)
+    
+
+@login_required
+def perfil(request, id):
+    """
+    View para exibir e editar o perfil do usuário
+    """
+    # Buscar o usuário ou retornar 404
+    usuario = get_object_or_404(User, id=id)
+    
+    # Verificar se o usuário logado é o mesmo do perfil
+    if request.user.id != usuario.id:
+        messages.error(request, 'Você não tem permissão para editar este perfil.')
+        return redirect('dashboard')
+    
+    if request.method == 'GET':
+        # Inicializar o formulário com os dados do usuário
+        form = PerfilForm(initial={
+            'first_name': usuario.first_name,
+            'last_name': usuario.last_name,
+            'email': usuario.email,
+        }, user=usuario)
+        
+        context = {
+            'usuario': usuario,
+            'form': form,
+            'is_editing': False,
+        }
+        return render(request, 'perfil.html', context)
+    
+    elif request.method == 'POST':
+        # Processar o formulário
+        form = PerfilForm(request.POST, user=usuario)
+        
+        if form.is_valid():
+            # Salvar as alterações
+            usuario.first_name = form.cleaned_data['first_name']
+            usuario.last_name = form.cleaned_data['last_name']
+            
+            # Verificar se a senha foi alterada
+            nova_senha = form.cleaned_data.get('nova_senha')
+            if nova_senha:
+                usuario.set_password(nova_senha)
+                # Atualizar a sessão para manter o usuário logado
+                update_session_auth_hash(request, usuario)
+                messages.success(request, 'Senha alterada com sucesso!')
+            
+            usuario.save()
+            messages.success(request, 'Perfil atualizado com sucesso!')
+            return redirect('perfil', id=usuario.id)
+        else:
+            # Se houver erros, exibir mensagens
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{form.fields[field].label}: {error}')
+            
+            context = {
+                'usuario': usuario,
+                'form': form,
+                'is_editing': True,
+            }
+            return render(request, 'perfil.html', context)
 
 
 # =========================

@@ -36,7 +36,6 @@ class User(AbstractUser):
 
 
 
-
 # Empresa / Ambiente
 class Workspace(models.Model):
 
@@ -53,8 +52,6 @@ class Workspace(models.Model):
     def __str__(self):
 
         return self.nome
-
-
 
 
 
@@ -91,8 +88,6 @@ class Board(models.Model):
     def __str__(self):
 
         return self.nome
-
-
 
 
 
@@ -135,8 +130,6 @@ class BoardMember(models.Model):
 
 
 
-
-
 # Workflow
 class Workflow(models.Model):
 
@@ -169,8 +162,6 @@ class Workflow(models.Model):
     def __str__(self):
 
         return self.nome
-
-
 
 
 
@@ -306,7 +297,6 @@ class Task(models.Model):
 
 
 
-
 # Comentários
 class Comment(models.Model):
 
@@ -340,8 +330,6 @@ class Comment(models.Model):
     def __str__(self):
 
         return f"Comentário - {self.task}"
-
-
 
 
 
@@ -436,7 +424,6 @@ class SubTask(models.Model):
     def __str__(self):
 
         return self.titulo
-
 
 
 
