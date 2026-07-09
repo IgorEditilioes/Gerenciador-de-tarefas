@@ -19,7 +19,7 @@ from .models import (
     SubTask,
     TaskHistory,
     Workflow,
-    BoardMember  # Para verificar membros do board
+    BoardMember
 )
 from .decorators import (
     admin_required,
@@ -88,13 +88,11 @@ def home(request):
     usuario = request.user
     workspace = usuario.workspace
 
-    # 🔥 FILTRO DE BOARDS POR PERFIL
     if usuario.tipo == 'admin':
         boards = Board.objects.all()
     elif usuario.tipo == 'gerente':
         boards = Board.objects.filter(workspace=workspace)
     else:
-        from .models import BoardMember
         boards_ids = BoardMember.objects.filter(
             usuario=usuario
         ).values_list('board_id', flat=True)
@@ -105,10 +103,7 @@ def home(request):
         )
 
     usuarios = User.objects.filter(workspace=workspace)
-
-    total_tarefas = Task.objects.filter(
-        board__workspace=workspace
-    ).count()
+    total_tarefas = Task.objects.filter(board__workspace=workspace).count()
 
     return render(
         request,
@@ -128,16 +123,12 @@ def home(request):
 # =========================
 @login_required
 def buscar_responsaveis(request):
-    """
-    Busca usuários do mesmo board (setor) para serem responsáveis pela tarefa
-    """
     termo = request.GET.get('term', '').strip()
     tarefa_id = request.GET.get('tarefa_id')
     board_id = request.GET.get('board_id')
     
     usuario_logado = request.user
     
-    # Se não tiver board_id, tenta buscar da tarefa
     if not board_id and tarefa_id:
         try:
             tarefa = Task.objects.get(id=tarefa_id)
@@ -145,17 +136,14 @@ def buscar_responsaveis(request):
         except Task.DoesNotExist:
             pass
     
-    # Se ainda não tiver board_id, retorna vazio
     if not board_id:
         return JsonResponse([], safe=False)
     
-    # Buscar o board
     try:
         board = Board.objects.get(id=board_id)
     except Board.DoesNotExist:
         return JsonResponse([], safe=False)
     
-    # Buscar membros do board (exceto o próprio usuário)
     membros_ids = BoardMember.objects.filter(
         board=board
     ).exclude(
@@ -167,7 +155,6 @@ def buscar_responsaveis(request):
         workspace=usuario_logado.workspace
     )
     
-    # Se tiver um termo de busca, filtrar
     if termo:
         usuarios = usuarios.filter(
             Q(first_name__icontains=termo) |
@@ -176,19 +163,16 @@ def buscar_responsaveis(request):
             Q(email__icontains=termo)
         )
     
-    # Se for uma tarefa específica, permitir o responsável atual
     if tarefa_id:
         try:
             tarefa = Task.objects.get(id=tarefa_id)
             if tarefa.responsavel and tarefa.responsavel.id != usuario_logado.id:
-                # Adicionar o responsável atual à lista mesmo que não seja membro do board
                 usuarios = usuarios | User.objects.filter(id=tarefa.responsavel.id)
         except Task.DoesNotExist:
             pass
     
-    # Formatar para o Select2
     results = []
-    for usuario in usuarios[:20]:  # Limitar a 20 resultados
+    for usuario in usuarios[:20]:
         nome_completo = usuario.get_full_name() or usuario.username
         results.append({
             'id': usuario.id,
@@ -204,20 +188,13 @@ def buscar_responsaveis(request):
 
 @login_required
 def get_responsaveis_board(request, board_id):
-    """
-    Retorna todos os usuários do mesmo board (setor)
-    """
     try:
         usuario_logado = request.user
-        
-        # Buscar o board
         board = get_object_or_404(Board, id=board_id)
         
-        # Verificar se o usuário tem acesso ao board
         if not check_permission_user_board(usuario_logado, board):
             return JsonResponse({'error': 'Sem permissão'}, status=403)
         
-        # Buscar membros do board (exceto o próprio usuário)
         membros_ids = BoardMember.objects.filter(
             board=board
         ).exclude(
@@ -229,7 +206,6 @@ def get_responsaveis_board(request, board_id):
             workspace=usuario_logado.workspace
         ).values('id', 'first_name', 'last_name', 'email', 'username')
         
-        # Formatar nomes
         usuarios_list = []
         for usuario in usuarios:
             nome_completo = f"{usuario.get('first_name', '')} {usuario.get('last_name', '')}".strip()
@@ -254,13 +230,9 @@ def get_responsaveis_board(request, board_id):
 @login_required
 @require_http_methods(["POST"])
 def atualizar_avatar(request, id):
-    """
-    View para atualizar o avatar do usuário via AJAX
-    """
     try:
         usuario = get_object_or_404(User, id=id)
         
-        # Verificar permissão
         if request.user.id != usuario.id:
             return JsonResponse({
                 'success': False,
@@ -268,7 +240,6 @@ def atualizar_avatar(request, id):
             }, status=403)
         
         if request.FILES.get('avatar'):
-            # Salvar o avatar
             usuario.avatar = request.FILES['avatar']
             usuario.save()
             
@@ -295,12 +266,8 @@ def atualizar_avatar(request, id):
 # =========================
 @login_required
 def perfil(request, id):
-    """
-    View para exibir e editar o perfil do usuário
-    """
     usuario = get_object_or_404(User, id=id)
     
-    # Verificar se o usuário logado é o mesmo do perfil
     if request.user.id != usuario.id:
         messages.error(request, 'Você não tem permissão para editar este perfil.')
         return redirect('home')
@@ -370,7 +337,6 @@ def create_board(request):
         privado=request.POST.get("privado") == "on"
     )
     
-    # Adicionar o criador como membro do board
     BoardMember.objects.create(
         board=board,
         usuario=usuario
@@ -417,64 +383,34 @@ def board_view(request, board_id):
         messages.error(request, "Você não tem permissão para acessar este setor.")
         return redirect("home")
     
-    # Buscar status
-    if usuario.tipo == 'admin':
-        status_list = Status.objects.filter(
-            workflow__board=board
-        ).order_by("ordem").prefetch_related(
-            "tasks__subtasks",
-            "tasks__comments",
-            "tasks__history"
-        )
-    elif usuario.tipo == 'gerente':
-        status_list = Status.objects.filter(
-            workflow__board=board
-        ).order_by("ordem").prefetch_related(
-            "tasks__subtasks",
-            "tasks__comments",
-            "tasks__history"
-        )
-    else:
-        status_list = Status.objects.filter(
-            workflow__board=board
-        ).order_by("ordem").prefetch_related(
-            "tasks__subtasks",
-            "tasks__comments",
-            "tasks__history"
-        )
-
-    # 🔥 CORREÇÃO: Buscar TODOS os membros do board (incluindo o próprio usuário)
-    from .models import BoardMember
+    status_list = Status.objects.filter(
+        workflow__board=board
+    ).order_by("ordem").prefetch_related(
+        "tasks__subtasks",
+        "tasks__comments",
+        "tasks__history"
+    )
     
-    # Buscar todos os membros do board
     membros_ids = BoardMember.objects.filter(
         board=board
     ).values_list('usuario_id', flat=True)
     
-    # Buscar usuários membros do board (todos, sem filtro de tipo)
     usuarios_board = User.objects.filter(
         id__in=membros_ids,
         workspace=usuario.workspace,
         is_active=True
     ).order_by('first_name', 'last_name')
     
-    # 🔥 IMPORTANTE: Garantir que o próprio usuário também esteja na lista
     if usuario not in usuarios_board:
-        # Se o usuário logado não estiver na lista, adicionar
         usuarios_board = usuarios_board | User.objects.filter(id=usuario.id)
 
-    # Todos os usuários do workspace (para outras funcionalidades)
     usuarios = User.objects.filter(
         workspace=request.user.workspace,
         is_active=True
     )
 
-    # Data atual para comparação nos templates
-    from datetime import date
+    from datetime import date, timedelta
     today = date.today()
-    
-    # Calcular data para daqui 3 dias
-    from datetime import timedelta
     today_plus_3 = today + timedelta(days=3)
 
     return render(
@@ -484,7 +420,7 @@ def board_view(request, board_id):
             "board": board,
             "status_list": status_list,
             "usuarios": usuarios,
-            "usuarios_board": usuarios_board,  # Todos os membros do board
+            "usuarios_board": usuarios_board,
             "user_tipo": usuario.tipo,
             "today": today,
             "today_plus_3": today_plus_3,
@@ -550,25 +486,20 @@ def add_task(request, board_id):
     responsavel_id = request.POST.get("responsavel")
     data_entrega = request.POST.get("data_entrega")
     
-    # REGRA: Usuário comum só pode criar tarefa para si mesmo
     if usuario.tipo == 'usuario':
         responsavel_id = usuario.id
     
-    # REGRA: Verificar se o responsável é membro do board
     if responsavel_id and responsavel_id != '':
         responsavel = get_object_or_404(User, id=responsavel_id)
-        # Verificar se o responsável é membro do board
         is_member = BoardMember.objects.filter(
             board=board,
             usuario=responsavel
         ).exists()
         
-        # Se não for admin/gerente e o responsável não for membro do board
         if usuario.tipo not in ['admin', 'gerente'] and not is_member:
             messages.error(request, "Você só pode atribuir tarefas para membros deste setor.")
             return redirect("board", board_id=board.id)
     
-    # Converter data_entrega para None se vazio
     if data_entrega == '':
         data_entrega = None
 
@@ -582,7 +513,7 @@ def add_task(request, board_id):
         responsavel_id=responsavel_id if responsavel_id else None,
         criado_por=usuario,
         atualizado_por=usuario,
-        data_entrega=data_entrega  # 🔥 ADICIONADO: Data de entrega
+        data_entrega=data_entrega
     )
 
     TaskHistory.objects.create(
@@ -614,7 +545,6 @@ def update_task(request, task_id):
             status=403
         )
 
-    # Verificar status "Concluído"
     novo_status_id = request.POST.get("status")
     if usuario.tipo == 'usuario':
         try:
@@ -627,7 +557,6 @@ def update_task(request, task_id):
         except:
             pass
 
-    # Verificar se o novo responsável é membro do board
     novo_responsavel_id = request.POST.get("responsavel")
     if novo_responsavel_id and novo_responsavel_id != '':
         try:
@@ -646,23 +575,19 @@ def update_task(request, task_id):
         except User.DoesNotExist:
             pass
 
-    # Processar data_entrega
     data_entrega = request.POST.get("data_entrega")
     if data_entrega == '':
         data_entrega = None
 
-    # Obter campos do POST
     titulo = request.POST.get("title")
     descricao = request.POST.get("description")
     prioridade = request.POST.get("prioridade")
     status_id = request.POST.get("status")
     responsavel_id = request.POST.get("responsavel")
 
-    # Validar campos obrigatórios
     if not titulo:
         return JsonResponse({"success": False, "error": "Título é obrigatório"})
 
-    # Registrar histórico
     campos = {
         "titulo": titulo,
         "descricao": descricao,
@@ -691,7 +616,6 @@ def update_task(request, task_id):
                 valor_novo=str(novo_valor)
             )
 
-    # Atualizar tarefa
     task.titulo = titulo
     task.descricao = descricao if descricao else ""
     task.prioridade = prioridade if prioridade else "media"
@@ -703,25 +627,24 @@ def update_task(request, task_id):
 
     return JsonResponse({"success": True})
 
+
+# =========================
+# UPDATE TASK STATUS (DRAG AND DROP)
+# =========================
 @login_required
 def update_task_status(request, task_id):
-    """
-    View específica para atualizar apenas o status da tarefa via drag and drop
-    """
     if request.method != "POST":
         return JsonResponse({"success": False, "error": "Método não permitido"})
     
     task = get_object_or_404(Task, id=task_id)
     usuario = request.user
     
-    # Verificar permissão
     if not check_permission_edit_task(usuario, task):
         return JsonResponse({
             "success": False, 
             "error": "Sem permissão para editar esta tarefa"
         }, status=403)
     
-    # Verificar se o status existe
     status_id = request.POST.get("status")
     if not status_id:
         return JsonResponse({
@@ -737,14 +660,12 @@ def update_task_status(request, task_id):
             "error": "Status inválido"
         }, status=400)
     
-    # Usuário comum não pode mover para "Concluído"
     if usuario.tipo == 'usuario' and novo_status.nome.lower() in ["concluído", "concluido"]:
         return JsonResponse({
             "success": False, 
             "error": "Usuários comuns não podem concluir tarefas"
         }, status=403)
     
-    # Registrar histórico
     TaskHistory.objects.create(
         task=task,
         usuario=request.user,
@@ -753,7 +674,6 @@ def update_task_status(request, task_id):
         valor_novo=novo_status.nome
     )
     
-    # Atualizar status
     task.status = novo_status
     task.atualizado_por = request.user
     task.save()
@@ -879,7 +799,7 @@ def add_comment(request, task_id):
 
 
 # =========================
-# SUBTASK
+# SUBTASK (CRIAR)
 # =========================
 @login_required
 def add_subtask(request, task_id):
@@ -896,14 +816,12 @@ def add_subtask(request, task_id):
         responsavel_id = request.POST.get("responsavel")
         data_entrega = request.POST.get("data_entrega")
         
-        # Converter data_entrega para None se vazio
-        if data_entrega == '':
+        if data_entrega == '' or data_entrega is None:
             data_entrega = None
         
         if usuario.tipo == 'usuario':
             responsavel_id = usuario.id
         
-        # Verificar se o responsável é membro do board
         if responsavel_id and responsavel_id != '':
             responsavel = get_object_or_404(User, id=responsavel_id)
             if usuario.tipo not in ['admin', 'gerente']:
@@ -927,7 +845,7 @@ def add_subtask(request, task_id):
             prioridade=request.POST.get("prioridade", "media"),
             responsavel_id=responsavel_id if responsavel_id else None,
             criado_por=usuario,
-            data_entrega=data_entrega  # 🔥 ADICIONADO: Data de entrega
+            data_entrega=data_entrega
         )
         
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -948,6 +866,9 @@ def add_subtask(request, task_id):
     return redirect("board", board_id=task.board.id)
 
 
+# =========================
+# SUBTASK (ATUALIZAR)
+# =========================
 @login_required
 def update_subtask(request, subtask_id):
     subtask = get_object_or_404(SubTask, id=subtask_id)
@@ -970,9 +891,8 @@ def update_subtask(request, subtask_id):
         responsavel_id = request.POST.get("responsavel")
         subtask.responsavel_id = int(responsavel_id) if responsavel_id and responsavel_id != '' else None
         
-        # 🔥 ADICIONADO: Atualizar data_entrega
         data_entrega = request.POST.get("data_entrega")
-        if data_entrega == '':
+        if data_entrega == '' or data_entrega is None:
             data_entrega = None
         subtask.data_entrega = data_entrega
 
@@ -996,21 +916,9 @@ def update_subtask(request, subtask_id):
     return redirect("board", board_id=subtask.task.board.id)
 
 
-@login_required
-def delete_subtask(request, subtask_id):
-    subtask = get_object_or_404(SubTask, id=subtask_id)
-    usuario = request.user
-    
-    if not check_permission_delete_subtask(usuario, subtask):
-        messages.error(request, "Você não tem permissão para excluir esta subtarefa.")
-        return redirect("board", board_id=subtask.task.board.id)
-    
-    board_id = subtask.task.board.id
-    subtask.delete()
-    messages.success(request, "Subtarefa excluída com sucesso!")
-    return redirect("board", board_id=board_id)
-
-
+# =========================
+# SUBTASK (TOGGLE - MARCAR/ DESMARCAR)
+# =========================
 @login_required
 def toggle_subtask(request, subtask_id):
     subtask = get_object_or_404(SubTask, id=subtask_id)
@@ -1041,6 +949,24 @@ def toggle_subtask(request, subtask_id):
         })
     
     return redirect("board", board_id=subtask.task.board.id)
+
+
+# =========================
+# SUBTASK (EXCLUIR)
+# =========================
+@login_required
+def delete_subtask(request, subtask_id):
+    subtask = get_object_or_404(SubTask, id=subtask_id)
+    usuario = request.user
+    
+    if not check_permission_delete_subtask(usuario, subtask):
+        messages.error(request, "Você não tem permissão para excluir esta subtarefa.")
+        return redirect("board", board_id=subtask.task.board.id)
+    
+    board_id = subtask.task.board.id
+    subtask.delete()
+    messages.success(request, "Subtarefa excluída com sucesso!")
+    return redirect("board", board_id=board_id)
 
 
 # =========================
