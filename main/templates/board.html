@@ -5,53 +5,606 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>{{board.nome}}</title>
+    <title>{{ board.nome }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{% static 'css/board.css' %}">
+    <style>
+        /* ============================
+           ESTILOS GERAIS
+           ============================ */
+        .board-header {
+            padding: 20px 30px;
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
 
+        .kanban-container {
+            display: flex;
+            gap: 20px;
+            padding: 20px 30px;
+            overflow-x: auto;
+            min-height: calc(100vh - 200px);
+            align-items: flex-start;
+        }
+
+        .kanban-column {
+            min-width: 320px;
+            max-width: 320px;
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e5e7eb;
+            transition: background-color 0.2s;
+        }
+
+        .kanban-column.drag-over {
+            background-color: #e8f0fe;
+            border-color: #3b82f6;
+            border-style: dashed;
+        }
+
+        .column-title {
+            font-weight: 600;
+            color: #1e293b;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e5e7eb;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .tasks {
+            min-height: 100px;
+            max-height: calc(100vh - 280px);
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .tasks::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .tasks::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        /* ============================
+           CARD DA TAREFA (MENOR)
+           ============================ */
+        .task-card {
+            background: white;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            cursor: grab;
+            transition: all 0.2s ease;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            position: relative;
+        }
+
+        .task-card:active {
+            cursor: grabbing;
+        }
+
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: #94a3b8;
+        }
+
+        .task-card.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        .task-card h4 {
+            font-size: 15px;
+            font-weight: 600;
+            margin: 0 0 6px 0;
+            color: #0f172a;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .task-card .task-description {
+            font-size: 13px;
+            color: #64748b;
+            margin: 0 0 8px 0;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* Meta informações do card */
+        .task-card .task-meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .task-card .task-meta .badge {
+            font-size: 10px;
+            padding: 2px 8px;
+        }
+
+        /* Badge de prioridade */
+        .priority-badge {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .priority-baixa { background: #e2e8f0; color: #475569; }
+        .priority-media { background: #fef9c3; color: #854d0e; }
+        .priority-alta { background: #fde68a; color: #92400e; }
+        .priority-urgente { background: #fecaca; color: #991b1b; }
+
+        /* Data de entrega */
+        .due-date {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            background: #f8fafc;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .due-date.overdue {
+            background: #fecaca;
+            border-color: #f87171;
+            color: #991b1b;
+        }
+
+        .due-date.today {
+            background: #fef3c7;
+            border-color: #f59e0b;
+            color: #92400e;
+        }
+
+        .due-date.soon {
+            background: #fef3c7;
+            border-color: #fcd34d;
+            color: #92400e;
+        }
+
+        /* ============================
+           BARRA DE PROGRESSO NO CARD
+           ============================ */
+        .task-card .task-progress {
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .task-card .task-progress .progress {
+            height: 6px;
+            border-radius: 4px;
+            background-color: #f1f5f9;
+            overflow: hidden;
+        }
+
+        .task-card .task-progress .progress-bar {
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+            height: 100%;
+        }
+
+        .task-card .task-progress .progress-bar.completed {
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+        }
+
+        .task-card .task-progress .progress-label {
+            font-size: 10px;
+            color: #94a3b8;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 3px;
+        }
+
+        .task-card .task-progress .progress-label .percent {
+            font-weight: 600;
+            color: #475569;
+        }
+
+        /* ============================
+           INDICADOR DE DRAG
+           ============================ */
+        .drag-handle {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            color: #cbd5e1;
+            font-size: 14px;
+            cursor: grab;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .task-card:hover .drag-handle {
+            opacity: 1;
+        }
+
+        /* ============================
+           FILTROS
+           ============================ */
+        .filters-section {
+            background: white;
+            padding: 12px 30px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .filters-section .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filters-section .filter-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #475569;
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        .filters-section .filter-group select,
+        .filters-section .filter-group input {
+            font-size: 13px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            min-width: 140px;
+        }
+
+        .filters-section .filter-group select:focus,
+        .filters-section .filter-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .filters-section .clear-filters {
+            font-size: 13px;
+            color: #64748b;
+            cursor: pointer;
+            padding: 4px 12px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .filters-section .clear-filters:hover {
+            background: #f1f5f9;
+            border-color: #94a3b8;
+        }
+
+        .filters-section .filter-stats {
+            font-size: 13px;
+            color: #64748b;
+            margin-left: auto;
+        }
+
+        .filters-section .filter-stats strong {
+            color: #0f172a;
+        }
+
+        /* ============================
+           MODAL
+           ============================ */
+        .modal-xl {
+            max-width: 1200px;
+        }
+
+        .comment-box {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+        }
+
+        .comment-box strong {
+            font-size: 13px;
+            color: #0f172a;
+        }
+
+        .comment-box p {
+            margin: 4px 0 0 0;
+            font-size: 14px;
+            color: #1e293b;
+        }
+
+        .comment-box small {
+            font-size: 11px;
+            color: #94a3b8;
+        }
+
+        .subtask-item {
+            transition: all 0.2s;
+        }
+
+        .subtask-item.subtask-concluida {
+            background-color: #f0fdf4;
+            border-color: #86efac !important;
+        }
+
+        .subtask-item .btn-sm {
+            padding: 2px 6px;
+            font-size: 12px;
+        }
+
+        /* ============================
+           EMPTY STATE
+           ============================ */
+        .empty-state {
+            text-align: center;
+            padding: 30px 10px;
+            color: #94a3b8;
+        }
+
+        .empty-state .fa-inbox {
+            font-size: 32px;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            margin: 0;
+        }
+
+        /* ============================
+           RESPONSIVO
+           ============================ */
+        @media (max-width: 768px) {
+            .kanban-container {
+                padding: 12px;
+                gap: 12px;
+            }
+
+            .kanban-column {
+                min-width: 280px;
+                max-width: 280px;
+            }
+
+            .board-header {
+                padding: 12px 16px;
+            }
+
+            .filters-section {
+                padding: 10px 16px;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filters-section .filter-group {
+                flex-wrap: wrap;
+            }
+
+            .filters-section .filter-group select,
+            .filters-section .filter-group input {
+                min-width: 100px;
+                flex: 1;
+            }
+
+            .filters-section .filter-stats {
+                margin-left: 0;
+                text-align: center;
+            }
+        }
+    </style>
 </head>
 
 <body>
     {% include 'navbar.html' %}
 
     <div class="board-header d-flex justify-content-between align-items-center">
-        <h2>{{board.nome}}</h2>
+        <div>
+            <h2 class="mb-0">{{ board.nome }}</h2>
+            <small class="text-muted">{{ board.descricao|default:"Sem descrição" }}</small>
+        </div>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTaskModal">
-            + Nova tarefa
+            <i class="fas fa-plus"></i> Nova tarefa
         </button>
     </div>
 
-    <div class="kanban-container">
-        {% for status in status_list %}
-        <div class="kanban-column">
-            <div class="column-title">{{status.nome}}</div>
+    <!-- ==========================
+    FILTROS
+    ========================== -->
+    <div class="filters-section" id="filtersSection">
+        <div class="filter-group">
+            <label><i class="fas fa-filter"></i> Filtros:</label>
+        </div>
 
-            <div class="tasks">
+        <div class="filter-group">
+            <label>Prioridade</label>
+            <select id="filterPriority">
+                <option value="all">Todas</option>
+                <option value="baixa">Baixa</option>
+                <option value="media">Média</option>
+                <option value="alta">Alta</option>
+                <option value="urgente">Urgente</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Data</label>
+            <select id="filterDueDate">
+                <option value="all">Todas</option>
+                <option value="overdue">Vencidas</option>
+                <option value="today">Hoje</option>
+                <option value="this_week">Esta semana</option>
+                <option value="no_date">Sem data</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Responsável</label>
+            <select id="filterResponsavel">
+                <option value="all">Todos</option>
+                <option value="unassigned">Sem responsável</option>
+                {% for usuario in usuarios_board %}
+                <option value="{{ usuario.id }}">{{ usuario.get_full_name|default:usuario.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Subtarefas</label>
+            <select id="filterSubtasks">
+                <option value="all">Todas</option>
+                <option value="has_subtasks">Com subtarefas</option>
+                <option value="no_subtasks">Sem subtarefas</option>
+                <option value="completed">100% concluídas</option>
+                <option value="incomplete">Incompletas</option>
+            </select>
+        </div>
+
+        <button class="clear-filters" onclick="clearFilters()">
+            <i class="fas fa-times"></i> Limpar
+        </button>
+
+        <span class="filter-stats" id="filterStats">
+            Mostrando <strong id="visibleCount">0</strong> tarefas
+        </span>
+    </div>
+
+    <!-- ==========================
+    KANBAN BOARD
+    ========================== -->
+    <div class="kanban-container" id="kanbanContainer">
+        {% for status in status_list %}
+        <div class="kanban-column" data-status="{{ status.id }}" data-status-name="{{ status.nome }}">
+            <div class="column-title">
+                {{ status.nome }}
+                <span class="badge bg-secondary float-end" id="count-{{ status.id }}">0</span>
+            </div>
+            <div class="tasks" id="tasks-{{ status.id }}" data-status="{{ status.id }}">
                 {% for task in status.tasks.all %}
-                <div class="task-card" data-bs-toggle="modal" data-bs-target="#taskModal{{task.id}}">
-                    <h4>{{task.titulo}}</h4>
-                    <p>{{task.descricao|truncatechars:50}}</p>
-                    <small class="text-muted">
+                <div class="task-card" 
+                     data-task-id="{{ task.id }}"
+                     data-prioridade="{{ task.prioridade }}"
+                     data-responsavel="{{ task.responsavel.id|default:'unassigned' }}"
+                     data-data-entrega="{{ task.data_entrega|date:'Y-m-d'|default:'' }}"
+                     draggable="true"
+                     onclick="openTaskModal({{ task.id }})">
+                    
+                    <!-- Ícone de arrastar -->
+                    <div class="drag-handle">
+                        <i class="fas fa-grip-vertical"></i>
+                    </div>
+                    
+                    <!-- TÍTULO -->
+                    <h4>{{ task.titulo }}</h4>
+                    
+                    <!-- DESCRIÇÃO -->
+                    {% if task.descricao %}
+                    <div class="task-description">{{ task.descricao|truncatechars:60 }}</div>
+                    {% endif %}
+
+                    <!-- META INFORMAÇÕES -->
+                    <div class="task-meta">
+                        <span class="priority-badge priority-{{ task.prioridade }}">
+                            {{ task.get_prioridade_display }}
+                        </span>
+
+                        {% if task.data_entrega %}
+                        <span class="due-date {% if task.data_entrega < today %}overdue{% elif task.data_entrega == today %}today{% elif task.data_entrega <= today_plus_3 %}soon{% endif %}">
+                            <i class="fas fa-calendar-alt"></i>
+                            {{ task.data_entrega|date:"d/m/Y" }}
+                            {% if task.data_entrega < today %}
+                            <i class="fas fa-exclamation-circle"></i>
+                            {% endif %}
+                        </span>
+                        {% endif %}
+
                         {% if task.responsavel %}
-                        👤 {{task.responsavel.username}}
+                        <span class="badge bg-light text-dark">
+                            <i class="fas fa-user"></i> {{ task.responsavel.get_full_name|default:task.responsavel.username }}
+                        </span>
                         {% endif %}
-                        {% if task.subtasks.count > 0 %}
-                        | 📋 {{task.subtasks.count}} subtarefas
+
+                        {% with total=task.subtasks.count %}
+                        {% if total > 0 %}
+                        <span class="badge bg-light text-dark subtask-count-badge">
+                            <i class="fas fa-tasks"></i> {{ total }}
+                        </span>
                         {% endif %}
-                    </small>
+                        {% endwith %}
+                    </div>
+
+                    <!-- ============================
+                    BARRA DE PROGRESSO NO CARD
+                    ============================ -->
+                    {% with subtasks=task.subtasks.all total=subtasks|length %}
+                    {% if total > 0 %}
+                    <div class="task-progress" id="card-progress-{{ task.id }}">
+                        <div class="progress">
+                            <div class="progress-bar" id="card-progress-bar-{{ task.id }}" 
+                                 role="progressbar" 
+                                 style="width: 0%;"
+                                 aria-valuenow="0" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                        <div class="progress-label">
+                            <span>Progresso</span>
+                            <span class="percent" id="card-progress-percent-{{ task.id }}">0%</span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="task-progress" id="card-progress-{{ task.id }}" style="display: none;">
+                        <div class="progress">
+                            <div class="progress-bar" id="card-progress-bar-{{ task.id }}" 
+                                 role="progressbar" 
+                                 style="width: 0%;"
+                                 aria-valuenow="0" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                        <div class="progress-label">
+                            <span>Progresso</span>
+                            <span class="percent" id="card-progress-percent-{{ task.id }}">0%</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
                 </div>
 
                 <!-- ==========================
                 MODAL TAREFA
                 ========================== -->
-                <div class="modal fade" id="taskModal{{task.id}}" data-task-id="{{task.id}}">
+                <div class="modal fade" id="taskModal{{ task.id }}" data-task-id="{{ task.id }}">
                     <div class="modal-dialog modal-xl modal-dialog-centered">
                         <div class="modal-content">
-                            <form id="taskForm{{task.id}}" data-url="{% url 'update_task' task.id %}">
+                            <form id="taskForm{{ task.id }}" data-url="{% url 'update_task' task.id %}">
                                 {% csrf_token %}
 
                                 <div class="modal-header">
-                                    <input name="title" class="form-control fs-4 fw-bold" value="{{task.titulo}}">
+                                    <input name="title" class="form-control fs-4 fw-bold" value="{{ task.titulo }}">
                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                 </div>
 
@@ -59,50 +612,93 @@
                                     <div class="row">
                                         <div class="col-md-8">
                                             <h6>Descrição</h6>
-                                            <textarea name="description" class="form-control" rows="5">{{task.descricao}}</textarea>
+                                            <textarea name="description" class="form-control" rows="5">{{ task.descricao }}</textarea>
 
                                             <hr>
 
-                                            <h6>Status</h6>
-                                            <select name="status" class="form-select mb-3">
-                                                {% for s in status_list %}
-                                                <option value="{{s.id}}" {% if task.status.id == s.id %}selected{% endif %}>
-                                                    {{s.nome}}
-                                                </option>
-                                                {% endfor %}
-                                            </select>
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <h6>Status</h6>
+                                                    <select name="status" class="form-select">
+                                                        {% for s in status_list %}
+                                                        <option value="{{ s.id }}" {% if task.status.id == s.id %}selected{% endif %}>
+                                                            {{ s.nome }}
+                                                        </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6>Prioridade</h6>
+                                                    <select name="prioridade" class="form-select">
+                                                        <option value="baixa" {% if task.prioridade == "baixa" %}selected{% endif %}>Baixa</option>
+                                                        <option value="media" {% if task.prioridade == "media" %}selected{% endif %}>Média</option>
+                                                        <option value="alta" {% if task.prioridade == "alta" %}selected{% endif %}>Alta</option>
+                                                        <option value="urgente" {% if task.prioridade == "urgente" %}selected{% endif %}>Urgente</option>
+                                                    </select>
+                                                </div>
+                                            </div>
 
-                                            <h6>Prioridade</h6>
-                                            <select name="prioridade" class="form-select mb-3">
-                                                <option value="baixa" {% if task.prioridade == "baixa" %}selected{% endif %}>Baixa</option>
-                                                <option value="media" {% if task.prioridade == "media" %}selected{% endif %}>Média</option>
-                                                <option value="alta" {% if task.prioridade == "alta" %}selected{% endif %}>Alta</option>
-                                                <option value="urgente" {% if task.prioridade == "urgente" %}selected{% endif %}>Urgente</option>
-                                            </select>
-
-                                            <h6>Responsável</h6>
-                                            <select name="responsavel" class="form-select">
-                                                <option value="">Sem responsável</option>
-                                                {% for usuario in usuarios %}
-                                                <option value="{{usuario.id}}" {% if task.responsavel.id == usuario.id %}selected{% endif %}>
-                                                    {{usuario.username}}
-                                                </option>
-                                                {% endfor %}
-                                            </select>
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <h6>Data de entrega</h6>
+                                                    <input type="date" name="data_entrega" class="form-control" 
+                                                           value="{{ task.data_entrega|date:'Y-m-d' }}">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6>Responsável</h6>
+                                                    <select name="responsavel" class="form-select" id="responsavel-select-{{ task.id }}">
+                                                        <option value="">Sem responsável</option>
+                                                        {% for usuario in usuarios_board %}
+                                                        <option value="{{ usuario.id }}" {% if task.responsavel.id == usuario.id %}selected{% endif %}>
+                                                            {{ usuario.get_full_name|default:usuario.username }}
+                                                            {% if usuario.tipo == 'admin' %} (Admin){% elif usuario.tipo == 'gerente' %} (Gerente){% endif %}
+                                                        </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-info-circle"></i> Apenas membros deste setor
+                                                    </small>
+                                                </div>
+                                            </div>
 
                                             <hr>
 
                                             <div class="d-flex justify-content-between align-items-center">
-                                                <h6 class="mb-0">Subtarefas (<span id="subtask-count-{{task.id}}">{{task.subtasks.count}}</span>)</h6>
-                                                <button type="button" class="btn btn-sm btn-primary" onclick="openSubtaskModal({{task.id}})">
-                                                    +
+                                                <h6 class="mb-0">Subtarefas (<span id="subtask-count-{{ task.id }}">{{ task.subtasks.count }}</span>)</h6>
+                                                <button type="button" class="btn btn-sm btn-primary" onclick="openSubtaskModal({{ task.id }})">
+                                                    <i class="fas fa-plus"></i>
                                                 </button>
                                             </div>
 
-                                            <div class="mt-3" id="subtasks-container-{{task.id}}">
+                                            <!-- BARRA DE PROGRESSO NO MODAL -->
+                                            <div class="mt-2 mb-3" id="modal-progress-{{ task.id }}">
+                                                {% with subtasks=task.subtasks.all total=subtasks|length %}
+                                                {% if total > 0 %}
+                                                <div class="task-progress">
+                                                    <div class="progress">
+                                                        <div class="progress-bar" id="modal-progress-bar-{{ task.id }}" 
+                                                             role="progressbar" 
+                                                             style="width: 0%;"
+                                                             aria-valuenow="0" 
+                                                             aria-valuemin="0" 
+                                                             aria-valuemax="100">
+                                                        </div>
+                                                    </div>
+                                                    <div class="progress-label">
+                                                        <span>Progresso</span>
+                                                        <span class="percent" id="modal-progress-percent-{{ task.id }}">0%</span>
+                                                    </div>
+                                                </div>
+                                                {% else %}
+                                                <p class="text-muted small">Nenhuma subtarefa criada</p>
+                                                {% endif %}
+                                                {% endwith %}
+                                            </div>
+
+                                            <div class="mt-3" id="subtasks-container-{{ task.id }}">
                                                 {% for sub in task.subtasks.all %}
                                                 <div class="border rounded p-2 mb-2 d-flex justify-content-between align-items-center subtask-item {% if sub.concluida %}subtask-concluida{% endif %}" 
-                                                     id="subtask-{{sub.id}}" data-subtask-id="{{sub.id}}">
+                                                     id="subtask-{{ sub.id }}" data-subtask-id="{{ sub.id }}">
                                                     <div>
                                                         <strong>{{ sub.titulo }}</strong>
                                                         <br>
@@ -112,23 +708,26 @@
                                                             </span>
                                                             Prioridade: {{ sub.get_prioridade_display }}
                                                             {% if sub.responsavel %}
-                                                            | 👤 {{ sub.responsavel.username }}
+                                                            | 👤 {{ sub.responsavel.get_full_name|default:sub.responsavel.username }}
+                                                            {% endif %}
+                                                            {% if sub.data_entrega %}
+                                                            | 📅 {{ sub.data_entrega|date:"d/m/Y" }}
                                                             {% endif %}
                                                         </small>
                                                     </div>
                                                     <div>
                                                         <button type="button" class="btn btn-sm btn-outline-success me-1" 
-                                                                onclick="toggleSubtask({{ sub.id }})">
-                                                            {% if sub.concluida %}↩{% else %}✓{% endif %}
+                                                                onclick="event.stopPropagation(); toggleSubtask({{ sub.id }}, {{ task.id }})">
+                                                            {% if sub.concluida %}<i class="fas fa-undo"></i>{% else %}<i class="fas fa-check"></i>{% endif %}
                                                         </button>
                                                         <button type="button" class="btn btn-sm btn-outline-primary" 
-                                                                onclick="openEditSubtaskModal({{ sub.id }})">
-                                                            ✏️
+                                                                onclick="event.stopPropagation(); openEditSubtaskModal({{ sub.id }})">
+                                                            <i class="fas fa-edit"></i>
                                                         </button>
                                                     </div>
                                                 </div>
                                                 {% empty %}
-                                                <p class="text-muted" id="no-subtasks-{{task.id}}">Nenhuma subtarefa</p>
+                                                <p class="text-muted" id="no-subtasks-{{ task.id }}">Nenhuma subtarefa</p>
                                                 {% endfor %}
                                             </div>
 
@@ -138,10 +737,10 @@
                                             <div style="max-height: 200px; overflow-y: auto;">
                                                 {% for h in task.history.all|slice:":10" %}
                                                 <div class="border rounded p-2 mb-2">
-                                                    <strong>{{h.usuario.username}}</strong>
-                                                    <p class="mb-0">Alterou: {{h.campo}}</p>
-                                                    <p class="mb-0 small">{{h.valor_antigo}} → {{h.valor_novo}}</p>
-                                                    <small class="text-muted">{{h.criado_em|date:"d/m/Y H:i"}}</small>
+                                                    <strong>{{ h.usuario.get_full_name|default:h.usuario.username }}</strong>
+                                                    <p class="mb-0">Alterou: {{ h.campo }}</p>
+                                                    <p class="mb-0 small">{{ h.valor_antigo }} → {{ h.valor_novo }}</p>
+                                                    <small class="text-muted">{{ h.criado_em|date:"d/m/Y H:i" }}</small>
                                                 </div>
                                                 {% empty %}
                                                 <p class="text-muted">Sem histórico</p>
@@ -151,29 +750,29 @@
 
                                         <div class="col-md-4 border-start">
                                             <h6>Comentários</h6>
-                                            <div class="comments-area" id="comments-{{task.id}}">
+                                            <div class="comments-area" id="comments-{{ task.id }}" style="max-height: 400px; overflow-y: auto;">
                                                 {% for comment in task.comments.all %}
                                                 <div class="comment-box">
-                                                    <strong>{{comment.usuario.username}}</strong>
-                                                    <p>{{comment.texto}}</p>
-                                                    <small class="text-muted">{{comment.criado_em|date:"d/m/Y H:i"}}</small>
+                                                    <strong>{{ comment.usuario.get_full_name|default:comment.usuario.username }}</strong>
+                                                    <p>{{ comment.texto }}</p>
+                                                    <small class="text-muted">{{ comment.criado_em|date:"d/m/Y H:i" }}</small>
                                                 </div>
                                                 {% endfor %}
                                             </div>
-                                            <textarea id="comment-input-{{task.id}}" class="form-control mt-2" placeholder="Adicionar comentário"></textarea>
-                                            <button type="button" class="btn btn-primary w-100 mt-2" onclick="addComment({{task.id}})">
-                                                Comentar
+                                            <textarea id="comment-input-{{ task.id }}" class="form-control mt-2" placeholder="Adicionar comentário" rows="2"></textarea>
+                                            <button type="button" class="btn btn-primary w-100 mt-2" onclick="addComment({{ task.id }})">
+                                                <i class="fas fa-comment"></i> Comentar
                                             </button>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="modal-footer">
-                                    <button type="button" class="btn btn-danger" onclick="deleteTask({{task.id}})">
-                                        Excluir tarefa
+                                    <button type="button" class="btn btn-danger" onclick="deleteTask({{ task.id }})">
+                                        <i class="fas fa-trash"></i> Excluir
                                     </button>
-                                    <button type="button" class="btn btn-success" onclick="saveTask({{task.id}})">
-                                        Salvar e fechar
+                                    <button type="button" class="btn btn-success" onclick="saveTask({{ task.id }})">
+                                        <i class="fas fa-save"></i> Salvar
                                     </button>
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                                         Fechar
@@ -187,31 +786,41 @@
                 <!-- ==========================
                 MODAL SUBTAREFA (CRIAR)
                 ========================== -->
-                <div class="modal fade" id="subtaskModal{{task.id}}">
+                <div class="modal fade" id="subtaskModal{{ task.id }}">
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h5>Nova subtarefa</h5>
+                                <h5><i class="fas fa-plus-circle"></i> Nova subtarefa</h5>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body">
-                                <input id="subtask-title-{{task.id}}" class="form-control mb-3" placeholder="Título" required>
-                                <select id="subtask-prioridade-{{task.id}}" class="form-select mb-3">
+                                <input id="subtask-title-{{ task.id }}" class="form-control mb-3" placeholder="Título" required>
+                                <select id="subtask-prioridade-{{ task.id }}" class="form-select mb-3">
                                     <option value="baixa">Baixa</option>
                                     <option value="media" selected>Média</option>
                                     <option value="alta">Alta</option>
                                     <option value="urgente">Urgente</option>
                                 </select>
-                                <select id="subtask-responsavel-{{task.id}}" class="form-select">
+                                <label class="mb-1">Data de entrega</label>
+                                <input type="date" id="subtask-data-entrega-{{ task.id }}" class="form-control mb-3">
+                                <label class="mb-1">Responsável</label>
+                                <select id="subtask-responsavel-{{ task.id }}" class="form-select">
                                     <option value="">Sem responsável</option>
-                                    {% for usuario in usuarios %}
-                                    <option value="{{usuario.id}}">{{usuario.username}}</option>
+                                    {% for usuario in usuarios_board %}
+                                    <option value="{{ usuario.id }}">
+                                        {{ usuario.get_full_name|default:usuario.username }}
+                                    </option>
                                     {% endfor %}
                                 </select>
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i> Apenas membros deste setor
+                                </small>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                <button type="button" class="btn btn-success" onclick="saveSubtask({{task.id}})">Salvar</button>
+                                <button type="button" class="btn btn-success" onclick="saveSubtask({{ task.id }})">
+                                    <i class="fas fa-check"></i> Salvar
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -220,36 +829,48 @@
                 <!-- ==========================
                 MODAL EDITAR SUBTAREFA
                 ========================== -->
-                <div class="modal fade" id="editSubTaskModal{{task.id}}">
+                <div class="modal fade" id="editSubTaskModal{{ task.id }}">
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h5>Editar subtarefa</h5>
+                                <h5><i class="fas fa-edit"></i> Editar subtarefa</h5>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body">
-                                <input id="edit-subtask-title-{{task.id}}" class="form-control mb-3" placeholder="Título" required>
-                                <select id="edit-subtask-prioridade-{{task.id}}" class="form-select mb-3">
+                                <input id="edit-subtask-title-{{ task.id }}" class="form-control mb-3" placeholder="Título" required>
+                                <select id="edit-subtask-prioridade-{{ task.id }}" class="form-select mb-3">
                                     <option value="baixa">Baixa</option>
                                     <option value="media">Média</option>
                                     <option value="alta">Alta</option>
                                     <option value="urgente">Urgente</option>
                                 </select>
-                                <select id="edit-subtask-concluida-{{task.id}}" class="form-select mb-3">
+                                <select id="edit-subtask-concluida-{{ task.id }}" class="form-select mb-3">
                                     <option value="False">Pendente</option>
                                     <option value="True">Concluída</option>
                                 </select>
-                                <select id="edit-subtask-responsavel-{{task.id}}" class="form-select">
+                                <label class="mb-1">Data de entrega</label>
+                                <input type="date" id="edit-subtask-data-entrega-{{ task.id }}" class="form-control mb-3">
+                                <label class="mb-1">Responsável</label>
+                                <select id="edit-subtask-responsavel-{{ task.id }}" class="form-select">
                                     <option value="">Sem responsável</option>
-                                    {% for usuario in usuarios %}
-                                    <option value="{{usuario.id}}">{{usuario.username}}</option>
+                                    {% for usuario in usuarios_board %}
+                                    <option value="{{ usuario.id }}">
+                                        {{ usuario.get_full_name|default:usuario.username }}
+                                    </option>
                                     {% endfor %}
                                 </select>
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i> Apenas membros deste setor
+                                </small>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                <button type="button" class="btn btn-success" onclick="updateSubtask({{task.id}})">Salvar</button>
-                                <button type="button" class="btn btn-danger" onclick="deleteSubtask({{task.id}})">Excluir</button>
+                                <button type="button" class="btn btn-success" onclick="updateSubtask({{ task.id }})">
+                                    <i class="fas fa-save"></i> Salvar
+                                </button>
+                                <button type="button" class="btn btn-danger" onclick="deleteSubtask({{ task.id }})">
+                                    <i class="fas fa-trash"></i> Excluir
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -271,32 +892,50 @@
                     {% csrf_token %}
                     
                     <div class="modal-header">
-                        <h5>Nova tarefa</h5>
+                        <h5><i class="fas fa-plus-circle"></i> Nova tarefa</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     
                     <div class="modal-body">
                         <input name="titulo" class="form-control mb-3" placeholder="Título" required>
-                        <textarea name="descricao" class="form-control mb-3" placeholder="Descrição"></textarea>
-                        <label class="mb-1">Prioridade</label>
-                        <select name="prioridade" class="form-select mb-3">
-                            <option value="baixa">Baixa</option>
-                            <option value="media" selected>Média</option>
-                            <option value="alta">Alta</option>
-                            <option value="urgente">Urgente</option>
-                        </select>
+                        <textarea name="descricao" class="form-control mb-3" placeholder="Descrição" rows="3"></textarea>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="mb-1">Prioridade</label>
+                                <select name="prioridade" class="form-select mb-3">
+                                    <option value="baixa">Baixa</option>
+                                    <option value="media" selected>Média</option>
+                                    <option value="alta">Alta</option>
+                                    <option value="urgente">Urgente</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="mb-1">Data de entrega</label>
+                                <input type="date" name="data_entrega" class="form-control mb-3">
+                            </div>
+                        </div>
+                        
                         <label class="mb-1">Responsável</label>
-                        <select name="responsavel" class="form-select mb-3">
+                        <select name="responsavel" class="form-select">
                             <option value="">Sem responsável</option>
-                            {% for usuario in usuarios %}
-                                <option value="{{ usuario.id }}">{{ usuario.username }}</option>
+                            {% for usuario in usuarios_board %}
+                            <option value="{{ usuario.id }}">
+                                {{ usuario.get_full_name|default:usuario.username }}
+                                {% if usuario.tipo == 'admin' %} (Admin){% elif usuario.tipo == 'gerente' %} (Gerente){% endif %}
+                            </option>
                             {% endfor %}
                         </select>
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i> Apenas membros deste setor
+                        </small>
                     </div>
                     
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Criar tarefa</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Criar tarefa
+                        </button>
                     </div>
                 </form>
             </div>
@@ -305,10 +944,19 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- =====================================================
-         JAVASCRIPT CORRIGIDO
-    ===================================================== -->
     <script>
+        // ===============================
+        // VARIÁVEIS GLOBAIS
+        // ===============================
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split('T')[0];
+        const todayPlus3 = new Date(today);
+        todayPlus3.setDate(todayPlus3.getDate() + 3);
+        const todayPlus3Str = todayPlus3.toISOString().split('T')[0];
+
+        const csrftoken = getCookie("csrftoken");
+
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -324,7 +972,465 @@
             return cookieValue;
         }
 
-        const csrftoken = getCookie("csrftoken");
+        // ===============================
+        // CALCULAR PROGRESSO DA TAREFA
+        // ===============================
+        function calcularProgresso(taskId) {
+            const container = document.getElementById("subtasks-container-" + taskId);
+            if (!container) return;
+
+            const subtasks = container.querySelectorAll('.subtask-item');
+            const total = subtasks.length;
+
+            // Atualizar barra de progresso do CARD
+            const cardProgress = document.getElementById("card-progress-" + taskId);
+            const cardProgressBar = document.getElementById("card-progress-bar-" + taskId);
+            const cardProgressPercent = document.getElementById("card-progress-percent-" + taskId);
+            
+            // Atualizar barra de progresso do MODAL
+            const modalProgress = document.getElementById("modal-progress-" + taskId);
+            const modalProgressBar = document.getElementById("modal-progress-bar-" + taskId);
+            const modalProgressPercent = document.getElementById("modal-progress-percent-" + taskId);
+
+            // Atualizar contador de subtarefas no badge
+            const badge = document.querySelector(`.task-card[data-task-id="${taskId}"] .subtask-count-badge`);
+            if (badge) {
+                badge.innerHTML = `<i class="fas fa-tasks"></i> ${total}`;
+            }
+
+            if (total === 0) {
+                // Esconder a barra de progresso do card
+                if (cardProgress) {
+                    cardProgress.style.display = 'none';
+                }
+                // Atualizar modal
+                if (modalProgress) {
+                    const noSubtasksMsg = modalProgress.querySelector('.text-muted');
+                    if (!noSubtasksMsg) {
+                        modalProgress.innerHTML = '<p class="text-muted small">Nenhuma subtarefa criada</p>';
+                    }
+                }
+                return;
+            }
+
+            // Mostrar a barra de progresso do card
+            if (cardProgress) {
+                cardProgress.style.display = 'block';
+            }
+
+            // Mostrar barra de progresso no modal
+            if (modalProgress) {
+                // Verificar se já tem a barra
+                let progressDiv = modalProgress.querySelector('.task-progress');
+                if (!progressDiv) {
+                    modalProgress.innerHTML = `
+                        <div class="task-progress">
+                            <div class="progress">
+                                <div class="progress-bar" id="modal-progress-bar-${taskId}" 
+                                     role="progressbar" 
+                                     style="width: 0%;"
+                                     aria-valuenow="0" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                </div>
+                            </div>
+                            <div class="progress-label">
+                                <span>Progresso</span>
+                                <span class="percent" id="modal-progress-percent-${taskId}">0%</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Contar subtarefas concluídas
+            let concluidas = 0;
+            subtasks.forEach(el => {
+                if (el.classList.contains('subtask-concluida')) {
+                    concluidas++;
+                }
+            });
+
+            const percentual = Math.round((concluidas / total) * 100);
+            const isCompleted = percentual === 100;
+
+            // Atualizar barra de progresso do CARD
+            if (cardProgressBar) {
+                cardProgressBar.style.width = percentual + '%';
+                cardProgressBar.setAttribute('aria-valuenow', percentual);
+                if (isCompleted) {
+                    cardProgressBar.classList.add('completed');
+                } else {
+                    cardProgressBar.classList.remove('completed');
+                }
+            }
+            if (cardProgressPercent) {
+                cardProgressPercent.textContent = percentual + '%';
+            }
+
+            // Atualizar barra de progresso do MODAL
+            const modalBar = document.getElementById("modal-progress-bar-" + taskId);
+            const modalPercent = document.getElementById("modal-progress-percent-" + taskId);
+            
+            if (modalBar) {
+                modalBar.style.width = percentual + '%';
+                modalBar.setAttribute('aria-valuenow', percentual);
+                if (isCompleted) {
+                    modalBar.classList.add('completed');
+                } else {
+                    modalBar.classList.remove('completed');
+                }
+            }
+            if (modalPercent) {
+                modalPercent.textContent = percentual + '%';
+            }
+
+            // Atualizar contagem de subtarefas
+            const countElement = document.getElementById("subtask-count-" + taskId);
+            if (countElement) {
+                countElement.textContent = total;
+            }
+        }
+
+        // ===============================
+        // TOGGLE SUBTASK (CORRIGIDO)
+        // ===============================
+        function toggleSubtask(subtaskId, taskId) {
+            console.log(`Toggling subtask ${subtaskId} for task ${taskId}`);
+            
+            fetch(`/subtask/${subtaskId}/toggle/`, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": csrftoken,
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Toggle response:', data);
+                if (data.success) {
+                    const element = document.getElementById("subtask-" + subtaskId);
+                    if (element) {
+                        if (data.concluida) {
+                            element.classList.add("subtask-concluida");
+                        } else {
+                            element.classList.remove("subtask-concluida");
+                        }
+                        
+                        const badge = element.querySelector('.badge');
+                        if (badge) {
+                            badge.textContent = data.concluida ? 'Concluída' : 'Pendente';
+                            badge.className = `badge ${data.concluida ? 'bg-success' : 'bg-warning'}`;
+                        }
+                        
+                        const button = element.querySelector('.btn-outline-success');
+                        if (button) {
+                            button.innerHTML = data.concluida ? '<i class="fas fa-undo"></i>' : '<i class="fas fa-check"></i>';
+                        }
+                        
+                        // Recalcular progresso usando o taskId passado
+                        if (taskId) {
+                            calcularProgresso(taskId);
+                        } else {
+                            // Fallback: tentar encontrar o taskId
+                            const taskElement = element.closest('.modal');
+                            if (taskElement) {
+                                const foundTaskId = taskElement.id.replace("taskModal", "");
+                                calcularProgresso(foundTaskId);
+                            }
+                        }
+                    }
+                } else {
+                    alert(data.error || "Erro ao alternar subtarefa");
+                }
+            })
+            .catch(error => {
+                console.error("Erro:", error);
+                alert("Erro ao alternar subtarefa: " + error.message);
+            });
+        }
+
+        // ===============================
+        // DRAG AND DROP
+        // ===============================
+        let draggedTask = null;
+        let draggedTaskId = null;
+        let sourceColumnId = null;
+
+        document.addEventListener('dragstart', function(e) {
+            const taskCard = e.target.closest('.task-card');
+            if (!taskCard) return;
+            
+            draggedTask = taskCard;
+            draggedTaskId = taskCard.dataset.taskId;
+            sourceColumnId = taskCard.closest('.kanban-column').dataset.status;
+            
+            taskCard.classList.add('dragging');
+            
+            // Armazenar dados do drag
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', draggedTaskId);
+        });
+
+        document.addEventListener('dragend', function(e) {
+            const taskCard = e.target.closest('.task-card');
+            if (taskCard) {
+                taskCard.classList.remove('dragging');
+            }
+            
+            // Remover estilos de drag-over de todas as colunas
+            document.querySelectorAll('.kanban-column.drag-over').forEach(col => {
+                col.classList.remove('drag-over');
+            });
+        });
+
+        // Adicionar eventos de drag para as colunas
+        document.querySelectorAll('.kanban-column').forEach(column => {
+            column.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                
+                // Remover drag-over de outras colunas
+                document.querySelectorAll('.kanban-column.drag-over').forEach(col => {
+                    if (col !== this) col.classList.remove('drag-over');
+                });
+                this.classList.add('drag-over');
+            });
+
+            column.addEventListener('dragleave', function(e) {
+                // Verificar se o mouse saiu da coluna
+                const relatedTarget = e.relatedTarget;
+                if (!column.contains(relatedTarget)) {
+                    this.classList.remove('drag-over');
+                }
+            });
+
+            column.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+                
+                const taskId = e.dataTransfer.getData('text/plain');
+                const targetStatusId = this.dataset.status;
+                
+                if (!taskId || !targetStatusId) return;
+                
+                // Verificar se é a mesma coluna
+                if (sourceColumnId === targetStatusId) {
+                    return;
+                }
+                
+                // Atualizar status da tarefa via AJAX
+                updateTaskStatus(taskId, targetStatusId);
+            });
+        });
+
+        // ===============================
+        // ATUALIZAR STATUS DA TAREFA
+        // ===============================
+        function updateTaskStatus(taskId, statusId) {
+            const formData = new FormData();
+            formData.append('status', statusId);
+            formData.append('title', ''); // Placeholder para não quebrar
+            
+            fetch(`/task/${taskId}/update/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Recarregar a página para atualizar o board
+                    location.reload();
+                } else {
+                    alert(data.error || 'Erro ao mover tarefa');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao mover tarefa');
+            });
+        }
+
+        // ===============================
+        // INICIALIZAÇÃO
+        // ===============================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Calcular progresso de cada tarefa
+            document.querySelectorAll('.task-card').forEach(card => {
+                const taskId = card.dataset.taskId;
+                // Esperar o DOM carregar completamente
+                setTimeout(() => calcularProgresso(taskId), 200);
+            });
+
+            // Aplicar filtros
+            aplicarFiltros();
+
+            // Event listeners dos filtros
+            document.querySelectorAll('#filterPriority, #filterDueDate, #filterResponsavel, #filterSubtasks').forEach(el => {
+                el.addEventListener('change', aplicarFiltros);
+            });
+
+            // Verificar selects de responsável
+            document.querySelectorAll('select[name="responsavel"]').forEach(select => {
+                const options = select.querySelectorAll('option');
+                let hasOptions = false;
+                for (let i = 0; i < options.length; i++) {
+                    if (options[i].value && options[i].value !== '') {
+                        hasOptions = true;
+                        break;
+                    }
+                }
+                if (!hasOptions) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'Nenhum membro disponível neste setor';
+                    option.disabled = true;
+                    option.selected = true;
+                    select.appendChild(option);
+                }
+            });
+        });
+
+        // ===============================
+        // APLICAR FILTROS
+        // ===============================
+        function aplicarFiltros() {
+            const priority = document.getElementById('filterPriority').value;
+            const dueDate = document.getElementById('filterDueDate').value;
+            const responsavel = document.getElementById('filterResponsavel').value;
+            const subtasks = document.getElementById('filterSubtasks').value;
+
+            let visibleCount = 0;
+
+            document.querySelectorAll('.task-card').forEach(card => {
+                let show = true;
+
+                // Filtro por prioridade
+                if (priority !== 'all' && card.dataset.prioridade !== priority) {
+                    show = false;
+                }
+
+                // Filtro por data de entrega
+                if (show && dueDate !== 'all') {
+                    const dataEntrega = card.dataset.dataEntrega;
+                    if (dueDate === 'no_date' && dataEntrega) {
+                        show = false;
+                    } else if (dueDate === 'overdue' && (!dataEntrega || dataEntrega >= todayStr)) {
+                        show = false;
+                    } else if (dueDate === 'today' && dataEntrega !== todayStr) {
+                        show = false;
+                    } else if (dueDate === 'this_week' && dataEntrega) {
+                        const date = new Date(dataEntrega);
+                        const diffDays = Math.ceil((date - today) / (1000 * 60 * 60 * 24));
+                        if (diffDays < 0 || diffDays > 7) {
+                            show = false;
+                        }
+                    } else if (dueDate === 'no_date' && dataEntrega) {
+                        show = false;
+                    }
+                }
+
+                // Filtro por responsável
+                if (show && responsavel !== 'all') {
+                    if (responsavel === 'unassigned' && card.dataset.responsavel !== 'unassigned') {
+                        show = false;
+                    } else if (responsavel !== 'unassigned' && card.dataset.responsavel !== responsavel) {
+                        show = false;
+                    }
+                }
+
+                // Filtro por subtarefas
+                if (show && subtasks !== 'all') {
+                    const badge = card.querySelector('.subtask-count-badge');
+                    const total = badge ? parseInt(badge.textContent.trim()) : 0;
+                    
+                    // Calcular concluídas
+                    const taskId = card.dataset.taskId;
+                    const container = document.getElementById("subtasks-container-" + taskId);
+                    let concluidas = 0;
+                    if (container) {
+                        container.querySelectorAll('.subtask-item.subtask-concluida').forEach(() => concluidas++);
+                    }
+                    
+                    if (subtasks === 'has_subtasks' && total === 0) {
+                        show = false;
+                    } else if (subtasks === 'no_subtasks' && total > 0) {
+                        show = false;
+                    } else if (subtasks === 'completed' && (total === 0 || concluidas < total)) {
+                        show = false;
+                    } else if (subtasks === 'incomplete' && (total === 0 || concluidas === total)) {
+                        show = false;
+                    }
+                }
+
+                // Mostrar ou esconder
+                if (show) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // Atualizar estatísticas
+            document.getElementById('visibleCount').textContent = visibleCount;
+
+            // Atualizar contagem por coluna
+            document.querySelectorAll('.kanban-column').forEach(column => {
+                const statusId = column.dataset.status;
+                const visibleCards = column.querySelectorAll('.task-card[style*="display: block"]');
+                const count = visibleCards.length;
+                const countElement = document.getElementById('count-' + statusId);
+                if (countElement) {
+                    countElement.textContent = count;
+                }
+
+                // Mostrar mensagem se não houver tarefas visíveis
+                const tasksContainer = column.querySelector('.tasks');
+                let emptyMessage = tasksContainer.querySelector('.empty-state-filtered');
+                if (count === 0) {
+                    if (!emptyMessage) {
+                        emptyMessage = document.createElement('div');
+                        emptyMessage.className = 'empty-state empty-state-filtered';
+                        emptyMessage.innerHTML = `
+                            <i class="fas fa-filter"></i>
+                            <p>Nenhuma tarefa corresponde aos filtros</p>
+                        `;
+                        tasksContainer.appendChild(emptyMessage);
+                    }
+                } else if (emptyMessage) {
+                    emptyMessage.remove();
+                }
+            });
+        }
+
+        // ===============================
+        // LIMPAR FILTROS
+        // ===============================
+        function clearFilters() {
+            document.getElementById('filterPriority').value = 'all';
+            document.getElementById('filterDueDate').value = 'all';
+            document.getElementById('filterResponsavel').value = 'all';
+            document.getElementById('filterSubtasks').value = 'all';
+            aplicarFiltros();
+        }
+
+        // ===============================
+        // ABRIR MODAL TAREFA
+        // ===============================
+        function openTaskModal(taskId) {
+            const modal = new bootstrap.Modal(document.getElementById('taskModal' + taskId));
+            modal.show();
+        }
 
         // ===============================
         // SALVAR TAREFA
@@ -335,6 +1441,25 @@
             if (!form) {
                 console.error("Form não encontrado para task:", taskId);
                 return;
+            }
+            
+            const responsavelSelect = document.getElementById("responsavel-select-" + taskId);
+            if (responsavelSelect) {
+                const selectedValue = responsavelSelect.value;
+                if (selectedValue) {
+                    const options = responsavelSelect.options;
+                    let isValid = false;
+                    for (let i = 0; i < options.length; i++) {
+                        if (options[i].value === selectedValue) {
+                            isValid = true;
+                            break;
+                        }
+                    }
+                    if (!isValid) {
+                        alert("O responsável selecionado não pertence a este setor.");
+                        return;
+                    }
+                }
             }
             
             const formData = new FormData(form);
@@ -351,7 +1476,7 @@
                 if (data.success) {
                     location.reload();
                 } else {
-                    alert("Erro ao salvar tarefa");
+                    alert(data.error || "Erro ao salvar tarefa");
                 }
             })
             .catch(error => {
@@ -402,17 +1527,17 @@
         // ABRIR MODAL SUBTAREFA
         // ===============================
         function openSubtaskModal(taskId) {
-            // Limpa os campos
             document.getElementById("subtask-title-" + taskId).value = "";
             document.getElementById("subtask-prioridade-" + taskId).value = "media";
             document.getElementById("subtask-responsavel-" + taskId).value = "";
+            document.getElementById("subtask-data-entrega-" + taskId).value = "";
             
             const modal = new bootstrap.Modal(document.getElementById("subtaskModal" + taskId));
             modal.show();
         }
 
         // ===============================
-        // SALVAR SUBTAREFA (AJAX)
+        // SALVAR SUBTAREFA
         // ===============================
         function saveSubtask(taskId) {
             const titulo = document.getElementById("subtask-title-" + taskId).value.trim();
@@ -423,11 +1548,13 @@
             
             const prioridade = document.getElementById("subtask-prioridade-" + taskId).value;
             const responsavel = document.getElementById("subtask-responsavel-" + taskId).value;
+            const dataEntrega = document.getElementById("subtask-data-entrega-" + taskId).value;
             
             const formData = new FormData();
             formData.append("titulo", titulo);
             formData.append("prioridade", prioridade);
             formData.append("responsavel", responsavel);
+            formData.append("data_entrega", dataEntrega);
             
             fetch(`/task/${taskId}/add-subtask/`, {
                 method: "POST",
@@ -440,25 +1567,14 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Fecha o modal de subtask
                     const modal = bootstrap.Modal.getInstance(document.getElementById("subtaskModal" + taskId));
                     modal.hide();
                     
-                    // Adiciona a subtask na lista sem recarregar a página
                     adicionarSubtaskNaLista(taskId, data.subtask);
                     
-                    // Atualiza o contador
-                    const countElement = document.getElementById("subtask-count-" + taskId);
-                    const currentCount = parseInt(countElement.textContent);
-                    countElement.textContent = currentCount + 1;
-                    
-                    // Remove a mensagem "Nenhuma subtarefa" se existir
-                    const noSubtasks = document.getElementById("no-subtasks-" + taskId);
-                    if (noSubtasks) {
-                        noSubtasks.remove();
-                    }
+                    calcularProgresso(taskId);
                 } else {
-                    alert("Erro ao criar subtarefa");
+                    alert(data.error || "Erro ao criar subtarefa");
                 }
             })
             .catch(error => {
@@ -473,6 +1589,12 @@
         function adicionarSubtaskNaLista(taskId, subtask) {
             const container = document.getElementById("subtasks-container-" + taskId);
             
+            // Remover mensagem "Nenhuma subtarefa" se existir
+            const noSubtasks = document.getElementById("no-subtasks-" + taskId);
+            if (noSubtasks) {
+                noSubtasks.remove();
+            }
+            
             const div = document.createElement("div");
             div.className = "border rounded p-2 mb-2 d-flex justify-content-between align-items-center subtask-item";
             div.id = "subtask-" + subtask.id;
@@ -480,6 +1602,7 @@
             
             const statusClass = subtask.concluida ? "bg-success" : "bg-warning";
             const statusText = subtask.concluida ? "Concluída" : "Pendente";
+            const dataEntrega = subtask.data_entrega ? `| 📅 ${subtask.data_entrega}` : '';
             
             div.innerHTML = `
                 <div>
@@ -489,14 +1612,15 @@
                         <span class="badge ${statusClass}">${statusText}</span>
                         Prioridade: ${subtask.prioridade_display}
                         ${subtask.responsavel ? `| 👤 ${subtask.responsavel}` : ''}
+                        ${dataEntrega}
                     </small>
                 </div>
                 <div>
-                    <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="toggleSubtask(${subtask.id})">
-                        ${subtask.concluida ? '↩' : '✓'}
+                    <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="event.stopPropagation(); toggleSubtask(${subtask.id}, ${taskId})">
+                        ${subtask.concluida ? '<i class="fas fa-undo"></i>' : '<i class="fas fa-check"></i>'}
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditSubtaskModal(${subtask.id})">
-                        ✏️
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); openEditSubtaskModal(${subtask.id})">
+                        <i class="fas fa-edit"></i>
                     </button>
                 </div>
             `;
@@ -508,18 +1632,14 @@
         // ABRIR MODAL EDITAR SUBTASK
         // ===============================
         function openEditSubtaskModal(subtaskId) {
-            // Busca os dados da subtask via AJAX
-            // Como temos os dados no HTML, vamos pegar do elemento
             const subtaskElement = document.getElementById("subtask-" + subtaskId);
             if (!subtaskElement) return;
             
-            // Pega a tarefa pai
             const taskElement = subtaskElement.closest('.modal');
             const taskId = taskElement ? taskElement.id.replace("taskModal", "") : null;
             
             if (!taskId) return;
             
-            // Pega os dados da subtask do elemento
             const titulo = subtaskElement.querySelector('strong').textContent;
             const prioridadeText = subtaskElement.querySelector('.text-muted').textContent;
             let prioridade = "media";
@@ -529,19 +1649,10 @@
             
             const isConcluida = subtaskElement.querySelector('.badge.bg-success') !== null;
             
-            let responsavelId = "";
-            const responsavelText = prioridadeText.split("👤");
-            if (responsavelText.length > 1) {
-                // Se tiver responsável, precisa buscar o ID
-                // Vamos fazer uma requisição para pegar os dados completos
-            }
-            
-            // Preenche o modal de edição
             document.getElementById("edit-subtask-title-" + taskId).value = titulo;
             document.getElementById("edit-subtask-prioridade-" + taskId).value = prioridade;
             document.getElementById("edit-subtask-concluida-" + taskId).value = isConcluida ? "True" : "False";
             
-            // Busca o responsável via AJAX
             fetch(`/task/${taskId}/subtasks/`, {
                 headers: {
                     "X-Requested-With": "XMLHttpRequest"
@@ -553,26 +1664,27 @@
                     const subtaskData = data.subtasks.find(s => s.id === subtaskId);
                     if (subtaskData) {
                         document.getElementById("edit-subtask-responsavel-" + taskId).value = subtaskData.responsavel_id || "";
+                        document.getElementById("edit-subtask-data-entrega-" + taskId).value = subtaskData.data_entrega || "";
                     }
                 }
+            })
+            .catch(error => {
+                console.error("Erro:", error);
             });
             
-            // Fecha o modal da tarefa
             const taskModal = bootstrap.Modal.getInstance(document.getElementById("taskModal" + taskId));
             if (taskModal) {
                 taskModal.hide();
             }
             
-            // Abre o modal de edição
             const modal = new bootstrap.Modal(document.getElementById("editSubTaskModal" + taskId));
             modal.show();
             
-            // Armazena o ID da subtask sendo editada
             document.getElementById("editSubTaskModal" + taskId).setAttribute("data-editing-subtask", subtaskId);
         }
 
         // ===============================
-        // ATUALIZAR SUBTASK (AJAX)
+        // ATUALIZAR SUBTASK
         // ===============================
         function updateSubtask(taskId) {
             const subtaskId = document.getElementById("editSubTaskModal" + taskId).getAttribute("data-editing-subtask");
@@ -590,12 +1702,30 @@
             const prioridade = document.getElementById("edit-subtask-prioridade-" + taskId).value;
             const concluida = document.getElementById("edit-subtask-concluida-" + taskId).value;
             const responsavel = document.getElementById("edit-subtask-responsavel-" + taskId).value;
+            const dataEntrega = document.getElementById("edit-subtask-data-entrega-" + taskId).value;
+            
+            if (responsavel) {
+                const select = document.getElementById("edit-subtask-responsavel-" + taskId);
+                const options = select.options;
+                let isValid = false;
+                for (let i = 0; i < options.length; i++) {
+                    if (options[i].value === responsavel) {
+                        isValid = true;
+                        break;
+                    }
+                }
+                if (!isValid) {
+                    alert("O responsável selecionado não pertence a este setor.");
+                    return;
+                }
+            }
             
             const formData = new FormData();
             formData.append("titulo", titulo);
             formData.append("prioridade", prioridade);
             formData.append("concluida", concluida);
             formData.append("responsavel", responsavel);
+            formData.append("data_entrega", dataEntrega);
             
             fetch(`/subtask/${subtaskId}/update/`, {
                 method: "POST",
@@ -608,20 +1738,18 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Fecha o modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById("editSubTaskModal" + taskId));
                     modal.hide();
                     
-                    // Atualiza a subtask na lista
                     atualizarSubtaskNaLista(taskId, data.subtask);
+                    calcularProgresso(taskId);
                     
-                    // Reabre o modal da tarefa
                     setTimeout(() => {
                         const taskModal = new bootstrap.Modal(document.getElementById("taskModal" + taskId));
                         taskModal.show();
                     }, 300);
                 } else {
-                    alert("Erro ao atualizar subtarefa");
+                    alert(data.error || "Erro ao atualizar subtarefa");
                 }
             })
             .catch(error => {
@@ -639,6 +1767,7 @@
             
             const statusClass = subtask.concluida ? "bg-success" : "bg-warning";
             const statusText = subtask.concluida ? "Concluída" : "Pendente";
+            const dataEntrega = subtask.data_entrega ? `| 📅 ${subtask.data_entrega}` : '';
             
             element.innerHTML = `
                 <div>
@@ -648,14 +1777,15 @@
                         <span class="badge ${statusClass}">${statusText}</span>
                         Prioridade: ${subtask.prioridade_display}
                         ${subtask.responsavel ? `| 👤 ${subtask.responsavel}` : ''}
+                        ${dataEntrega}
                     </small>
                 </div>
                 <div>
-                    <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="toggleSubtask(${subtask.id})">
-                        ${subtask.concluida ? '↩' : '✓'}
+                    <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="event.stopPropagation(); toggleSubtask(${subtask.id}, ${taskId})">
+                        ${subtask.concluida ? '<i class="fas fa-undo"></i>' : '<i class="fas fa-check"></i>'}
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditSubtaskModal(${subtask.id})">
-                        ✏️
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); openEditSubtaskModal(${subtask.id})">
+                        <i class="fas fa-edit"></i>
                     </button>
                 </div>
             `;
@@ -665,27 +1795,6 @@
             } else {
                 element.classList.remove("subtask-concluida");
             }
-        }
-
-        // ===============================
-        // TOGGLE SUBTASK
-        // ===============================
-        function toggleSubtask(subtaskId) {
-            fetch(`/subtask/${subtaskId}/toggle/`, {
-                method: "POST",
-                headers: {
-                    "X-CSRFToken": csrftoken
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    location.reload();
-                }
-            })
-            .catch(error => {
-                console.error("Erro:", error);
-                alert("Erro ao alternar subtarefa");
-            });
         }
 
         // ===============================
@@ -710,22 +1819,14 @@
             })
             .then(response => {
                 if (response.ok) {
-                    // Fecha o modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById("editSubTaskModal" + taskId));
                     modal.hide();
                     
-                    // Remove o elemento da lista
                     const element = document.getElementById("subtask-" + subtaskId);
                     if (element) {
                         element.remove();
                     }
                     
-                    // Atualiza o contador
-                    const countElement = document.getElementById("subtask-count-" + taskId);
-                    const currentCount = parseInt(countElement.textContent);
-                    countElement.textContent = currentCount - 1;
-                    
-                    // Se não tiver mais subtasks, mostra a mensagem
                     const container = document.getElementById("subtasks-container-" + taskId);
                     if (container.children.length === 0) {
                         const p = document.createElement("p");
@@ -735,7 +1836,8 @@
                         container.appendChild(p);
                     }
                     
-                    // Reabre o modal da tarefa
+                    calcularProgresso(taskId);
+                    
                     setTimeout(() => {
                         const taskModal = new bootstrap.Modal(document.getElementById("taskModal" + taskId));
                         taskModal.show();
@@ -764,24 +1866,28 @@
         document.addEventListener('hidden.bs.modal', function(event) {
             const modalId = event.target.id;
             
-            // Quando o modal de criar subtask fechar
             if (modalId && modalId.startsWith('subtaskModal')) {
                 const taskId = modalId.replace('subtaskModal', '');
-                // Reabre o modal da tarefa
                 const taskModal = new bootstrap.Modal(document.getElementById('taskModal' + taskId));
                 taskModal.show();
             }
             
-            // Quando o modal de editar subtask fechar
             if (modalId && modalId.startsWith('editSubTaskModal')) {
                 const taskId = modalId.replace('editSubTaskModal', '');
-                // Verifica se não tem outro modal aberto
                 const openModals = document.querySelectorAll('.modal.show');
                 if (openModals.length === 0) {
-                    // Reabre o modal da tarefa
                     const taskModal = new bootstrap.Modal(document.getElementById('taskModal' + taskId));
                     taskModal.show();
                 }
+            }
+        });
+
+        // Recalcular progresso quando o modal é aberto
+        document.addEventListener('shown.bs.modal', function(event) {
+            const modal = event.target;
+            if (modal.id && modal.id.startsWith('taskModal')) {
+                const taskId = modal.id.replace('taskModal', '');
+                setTimeout(() => calcularProgresso(taskId), 200);
             }
         });
     </script>

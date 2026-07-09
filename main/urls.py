@@ -14,7 +14,9 @@ from .views import (
     toggle_subtask,
     delete_subtask,
     get_subtasks,
-    create_board,  # 👈 IMPORTADO
+    create_board,
+    get_responsaveis_board,
+    buscar_responsaveis
 )
 
 urlpatterns = [
@@ -60,5 +62,8 @@ urlpatterns = [
     # ======================
     # Perfil
     # ======================
-    path('perfil/<int:id>', perfil, name="perfil")
+    path('perfil/<int:id>', perfil, name="perfil"),
+
+    path('buscar-responsaveis/', buscar_responsaveis, name='buscar_responsaveis'),
+    path('get-responsaveis-setor/', get_responsaveis_board, name='get_responsaveis_setor'),
 ]
