@@ -123,7 +123,6 @@
             overflow: hidden;
         }
 
-        /* Meta informações do card */
         .task-card .task-meta {
             display: flex;
             flex-wrap: wrap;
@@ -139,7 +138,6 @@
             padding: 2px 8px;
         }
 
-        /* Badge de prioridade */
         .priority-badge {
             font-size: 10px;
             padding: 2px 8px;
@@ -152,7 +150,6 @@
         .priority-alta { background: #fde68a; color: #92400e; }
         .priority-urgente { background: #fecaca; color: #991b1b; }
 
-        /* Data de entrega */
         .due-date {
             font-size: 11px;
             padding: 2px 8px;
@@ -182,9 +179,6 @@
             color: #92400e;
         }
 
-        /* ============================
-           BARRA DE PROGRESSO NO CARD
-           ============================ */
         .task-card .task-progress {
             margin-top: 10px;
             padding-top: 8px;
@@ -222,9 +216,6 @@
             color: #475569;
         }
 
-        /* ============================
-           INDICADOR DE DRAG
-           ============================ */
         .drag-handle {
             position: absolute;
             top: 8px;
@@ -240,9 +231,6 @@
             opacity: 1;
         }
 
-        /* ============================
-           FILTROS
-           ============================ */
         .filters-section {
             background: white;
             padding: 12px 30px;
@@ -310,9 +298,6 @@
             color: #0f172a;
         }
 
-        /* ============================
-           MODAL
-           ============================ */
         .modal-xl {
             max-width: 1200px;
         }
@@ -354,9 +339,6 @@
             font-size: 12px;
         }
 
-        /* ============================
-           EMPTY STATE
-           ============================ */
         .empty-state {
             text-align: center;
             padding: 30px 10px;
@@ -374,9 +356,6 @@
             margin: 0;
         }
 
-        /* ============================
-           RESPONSIVO
-           ============================ */
         @media (max-width: 768px) {
             .kanban-container {
                 padding: 12px;
@@ -429,9 +408,7 @@
         </button>
     </div>
 
-    <!-- ==========================
-    FILTROS
-    ========================== -->
+    <!-- FILTROS -->
     <div class="filters-section" id="filtersSection">
         <div class="filter-group">
             <label><i class="fas fa-filter"></i> Filtros:</label>
@@ -490,9 +467,7 @@
         </span>
     </div>
 
-    <!-- ==========================
-    KANBAN BOARD
-    ========================== -->
+    <!-- KANBAN BOARD -->
     <div class="kanban-container" id="kanbanContainer">
         {% for status in status_list %}
         <div class="kanban-column" data-status="{{ status.id }}" data-status-name="{{ status.nome }}">
@@ -510,20 +485,16 @@
                      draggable="true"
                      onclick="openTaskModal({{ task.id }})">
                     
-                    <!-- Ícone de arrastar -->
                     <div class="drag-handle">
                         <i class="fas fa-grip-vertical"></i>
                     </div>
                     
-                    <!-- TÍTULO -->
                     <h4>{{ task.titulo }}</h4>
                     
-                    <!-- DESCRIÇÃO -->
                     {% if task.descricao %}
                     <div class="task-description">{{ task.descricao|truncatechars:60 }}</div>
                     {% endif %}
 
-                    <!-- META INFORMAÇÕES -->
                     <div class="task-meta">
                         <span class="priority-badge priority-{{ task.prioridade }}">
                             {{ task.get_prioridade_display }}
@@ -554,9 +525,6 @@
                         {% endwith %}
                     </div>
 
-                    <!-- ============================
-                    BARRA DE PROGRESSO NO CARD
-                    ============================ -->
                     {% with subtasks=task.subtasks.all total=subtasks|length %}
                     {% if total > 0 %}
                     <div class="task-progress" id="card-progress-{{ task.id }}">
@@ -594,9 +562,7 @@
                     {% endwith %}
                 </div>
 
-                <!-- ==========================
-                MODAL TAREFA
-                ========================== -->
+                <!-- MODAL TAREFA -->
                 <div class="modal fade" id="taskModal{{ task.id }}" data-task-id="{{ task.id }}">
                     <div class="modal-dialog modal-xl modal-dialog-centered">
                         <div class="modal-content">
@@ -670,7 +636,6 @@
                                                 </button>
                                             </div>
 
-                                            <!-- BARRA DE PROGRESSO NO MODAL -->
                                             <div class="mt-2 mb-3" id="modal-progress-{{ task.id }}">
                                                 {% with subtasks=task.subtasks.all total=subtasks|length %}
                                                 {% if total > 0 %}
@@ -783,9 +748,7 @@
                     </div>
                 </div>
 
-                <!-- ==========================
-                MODAL SUBTAREFA (CRIAR)
-                ========================== -->
+                <!-- MODAL SUBTAREFA (CRIAR) -->
                 <div class="modal fade" id="subtaskModal{{ task.id }}">
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content">
@@ -826,9 +789,7 @@
                     </div>
                 </div>
 
-                <!-- ==========================
-                MODAL EDITAR SUBTAREFA
-                ========================== -->
+                <!-- MODAL EDITAR SUBTAREFA -->
                 <div class="modal fade" id="editSubTaskModal{{ task.id }}">
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content">
@@ -882,9 +843,7 @@
         {% endfor %}
     </div>
 
-    <!-- =====================================================
-         MODAL NOVA TAREFA
-    ===================================================== -->
+    <!-- MODAL NOVA TAREFA -->
     <div class="modal fade" id="addTaskModal">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -948,13 +907,6 @@
         // ===============================
         // VARIÁVEIS GLOBAIS
         // ===============================
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayStr = today.toISOString().split('T')[0];
-        const todayPlus3 = new Date(today);
-        todayPlus3.setDate(todayPlus3.getDate() + 3);
-        const todayPlus3Str = todayPlus3.toISOString().split('T')[0];
-
         const csrftoken = getCookie("csrftoken");
 
         function getCookie(name) {
@@ -982,45 +934,30 @@
             const subtasks = container.querySelectorAll('.subtask-item');
             const total = subtasks.length;
 
-            // Atualizar barra de progresso do CARD
             const cardProgress = document.getElementById("card-progress-" + taskId);
             const cardProgressBar = document.getElementById("card-progress-bar-" + taskId);
             const cardProgressPercent = document.getElementById("card-progress-percent-" + taskId);
             
-            // Atualizar barra de progresso do MODAL
             const modalProgress = document.getElementById("modal-progress-" + taskId);
             const modalProgressBar = document.getElementById("modal-progress-bar-" + taskId);
             const modalProgressPercent = document.getElementById("modal-progress-percent-" + taskId);
 
-            // Atualizar contador de subtarefas no badge
             const badge = document.querySelector(`.task-card[data-task-id="${taskId}"] .subtask-count-badge`);
             if (badge) {
                 badge.innerHTML = `<i class="fas fa-tasks"></i> ${total}`;
             }
 
             if (total === 0) {
-                // Esconder a barra de progresso do card
-                if (cardProgress) {
-                    cardProgress.style.display = 'none';
-                }
-                // Atualizar modal
+                if (cardProgress) cardProgress.style.display = 'none';
                 if (modalProgress) {
-                    const noSubtasksMsg = modalProgress.querySelector('.text-muted');
-                    if (!noSubtasksMsg) {
-                        modalProgress.innerHTML = '<p class="text-muted small">Nenhuma subtarefa criada</p>';
-                    }
+                    modalProgress.innerHTML = '<p class="text-muted small">Nenhuma subtarefa criada</p>';
                 }
                 return;
             }
 
-            // Mostrar a barra de progresso do card
-            if (cardProgress) {
-                cardProgress.style.display = 'block';
-            }
+            if (cardProgress) cardProgress.style.display = 'block';
 
-            // Mostrar barra de progresso no modal
             if (modalProgress) {
-                // Verificar se já tem a barra
                 let progressDiv = modalProgress.querySelector('.task-progress');
                 if (!progressDiv) {
                     modalProgress.innerHTML = `
@@ -1043,18 +980,14 @@
                 }
             }
 
-            // Contar subtarefas concluídas
             let concluidas = 0;
             subtasks.forEach(el => {
-                if (el.classList.contains('subtask-concluida')) {
-                    concluidas++;
-                }
+                if (el.classList.contains('subtask-concluida')) concluidas++;
             });
 
             const percentual = Math.round((concluidas / total) * 100);
             const isCompleted = percentual === 100;
 
-            // Atualizar barra de progresso do CARD
             if (cardProgressBar) {
                 cardProgressBar.style.width = percentual + '%';
                 cardProgressBar.setAttribute('aria-valuenow', percentual);
@@ -1068,7 +1001,6 @@
                 cardProgressPercent.textContent = percentual + '%';
             }
 
-            // Atualizar barra de progresso do MODAL
             const modalBar = document.getElementById("modal-progress-bar-" + taskId);
             const modalPercent = document.getElementById("modal-progress-percent-" + taskId);
             
@@ -1085,7 +1017,6 @@
                 modalPercent.textContent = percentual + '%';
             }
 
-            // Atualizar contagem de subtarefas
             const countElement = document.getElementById("subtask-count-" + taskId);
             if (countElement) {
                 countElement.textContent = total;
@@ -1093,11 +1024,9 @@
         }
 
         // ===============================
-        // TOGGLE SUBTASK (CORRIGIDO)
+        // TOGGLE SUBTASK
         // ===============================
         function toggleSubtask(subtaskId, taskId) {
-            console.log(`Toggling subtask ${subtaskId} for task ${taskId}`);
-            
             fetch(`/subtask/${subtaskId}/toggle/`, {
                 method: "POST",
                 headers: {
@@ -1105,14 +1034,8 @@
                     "X-Requested-With": "XMLHttpRequest"
                 }
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log('Toggle response:', data);
                 if (data.success) {
                     const element = document.getElementById("subtask-" + subtaskId);
                     if (element) {
@@ -1133,16 +1056,8 @@
                             button.innerHTML = data.concluida ? '<i class="fas fa-undo"></i>' : '<i class="fas fa-check"></i>';
                         }
                         
-                        // Recalcular progresso usando o taskId passado
                         if (taskId) {
                             calcularProgresso(taskId);
-                        } else {
-                            // Fallback: tentar encontrar o taskId
-                            const taskElement = element.closest('.modal');
-                            if (taskElement) {
-                                const foundTaskId = taskElement.id.replace("taskModal", "");
-                                calcularProgresso(foundTaskId);
-                            }
                         }
                     }
                 } else {
@@ -1151,14 +1066,13 @@
             })
             .catch(error => {
                 console.error("Erro:", error);
-                alert("Erro ao alternar subtarefa: " + error.message);
+                alert("Erro ao alternar subtarefa");
             });
         }
 
         // ===============================
-        // DRAG AND DROP
+        // DRAG AND DROP - USANDO A NOVA VIEW
         // ===============================
-        let draggedTask = null;
         let draggedTaskId = null;
         let sourceColumnId = null;
 
@@ -1166,13 +1080,10 @@
             const taskCard = e.target.closest('.task-card');
             if (!taskCard) return;
             
-            draggedTask = taskCard;
             draggedTaskId = taskCard.dataset.taskId;
             sourceColumnId = taskCard.closest('.kanban-column').dataset.status;
             
             taskCard.classList.add('dragging');
-            
-            // Armazenar dados do drag
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/plain', draggedTaskId);
         });
@@ -1182,20 +1093,15 @@
             if (taskCard) {
                 taskCard.classList.remove('dragging');
             }
-            
-            // Remover estilos de drag-over de todas as colunas
             document.querySelectorAll('.kanban-column.drag-over').forEach(col => {
                 col.classList.remove('drag-over');
             });
         });
 
-        // Adicionar eventos de drag para as colunas
         document.querySelectorAll('.kanban-column').forEach(column => {
             column.addEventListener('dragover', function(e) {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
-                
-                // Remover drag-over de outras colunas
                 document.querySelectorAll('.kanban-column.drag-over').forEach(col => {
                     if (col !== this) col.classList.remove('drag-over');
                 });
@@ -1203,9 +1109,7 @@
             });
 
             column.addEventListener('dragleave', function(e) {
-                // Verificar se o mouse saiu da coluna
-                const relatedTarget = e.relatedTarget;
-                if (!column.contains(relatedTarget)) {
+                if (!column.contains(e.relatedTarget)) {
                     this.classList.remove('drag-over');
                 }
             });
@@ -1218,68 +1122,71 @@
                 const targetStatusId = this.dataset.status;
                 
                 if (!taskId || !targetStatusId) return;
+                if (sourceColumnId === targetStatusId) return;
                 
-                // Verificar se é a mesma coluna
-                if (sourceColumnId === targetStatusId) {
-                    return;
+                // Pegar o card
+                const card = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+                
+                if (card) {
+                    card.style.opacity = '0.5';
+                    card.style.pointerEvents = 'none';
                 }
                 
-                // Atualizar status da tarefa via AJAX
-                updateTaskStatus(taskId, targetStatusId);
+                // Usar a nova view específica para status
+                const formData = new FormData();
+                formData.append('status', targetStatusId);
+                
+                fetch(`/task/${taskId}/update-status/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        if (card) {
+                            card.style.opacity = '1';
+                            card.style.pointerEvents = 'auto';
+                        }
+                        alert(data.error || 'Erro ao mover tarefa');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    if (card) {
+                        card.style.opacity = '1';
+                        card.style.pointerEvents = 'auto';
+                    }
+                    alert('Erro ao mover tarefa. Tente novamente.');
+                });
             });
         });
-
-        // ===============================
-        // ATUALIZAR STATUS DA TAREFA
-        // ===============================
-        function updateTaskStatus(taskId, statusId) {
-            const formData = new FormData();
-            formData.append('status', statusId);
-            formData.append('title', ''); // Placeholder para não quebrar
-            
-            fetch(`/task/${taskId}/update/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrftoken,
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Recarregar a página para atualizar o board
-                    location.reload();
-                } else {
-                    alert(data.error || 'Erro ao mover tarefa');
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                alert('Erro ao mover tarefa');
-            });
-        }
 
         // ===============================
         // INICIALIZAÇÃO
         // ===============================
         document.addEventListener('DOMContentLoaded', function() {
-            // Calcular progresso de cada tarefa
             document.querySelectorAll('.task-card').forEach(card => {
                 const taskId = card.dataset.taskId;
-                // Esperar o DOM carregar completamente
                 setTimeout(() => calcularProgresso(taskId), 200);
             });
 
-            // Aplicar filtros
             aplicarFiltros();
 
-            // Event listeners dos filtros
             document.querySelectorAll('#filterPriority, #filterDueDate, #filterResponsavel, #filterSubtasks').forEach(el => {
                 el.addEventListener('change', aplicarFiltros);
             });
 
-            // Verificar selects de responsável
             document.querySelectorAll('select[name="responsavel"]').forEach(select => {
                 const options = select.querySelectorAll('option');
                 let hasOptions = false;
@@ -1310,16 +1217,17 @@
             const subtasks = document.getElementById('filterSubtasks').value;
 
             let visibleCount = 0;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayStr = today.toISOString().split('T')[0];
 
             document.querySelectorAll('.task-card').forEach(card => {
                 let show = true;
 
-                // Filtro por prioridade
                 if (priority !== 'all' && card.dataset.prioridade !== priority) {
                     show = false;
                 }
 
-                // Filtro por data de entrega
                 if (show && dueDate !== 'all') {
                     const dataEntrega = card.dataset.dataEntrega;
                     if (dueDate === 'no_date' && dataEntrega) {
@@ -1339,7 +1247,6 @@
                     }
                 }
 
-                // Filtro por responsável
                 if (show && responsavel !== 'all') {
                     if (responsavel === 'unassigned' && card.dataset.responsavel !== 'unassigned') {
                         show = false;
@@ -1348,12 +1255,9 @@
                     }
                 }
 
-                // Filtro por subtarefas
                 if (show && subtasks !== 'all') {
                     const badge = card.querySelector('.subtask-count-badge');
                     const total = badge ? parseInt(badge.textContent.trim()) : 0;
-                    
-                    // Calcular concluídas
                     const taskId = card.dataset.taskId;
                     const container = document.getElementById("subtasks-container-" + taskId);
                     let concluidas = 0;
@@ -1372,7 +1276,6 @@
                     }
                 }
 
-                // Mostrar ou esconder
                 if (show) {
                     card.style.display = 'block';
                     visibleCount++;
@@ -1381,10 +1284,8 @@
                 }
             });
 
-            // Atualizar estatísticas
             document.getElementById('visibleCount').textContent = visibleCount;
 
-            // Atualizar contagem por coluna
             document.querySelectorAll('.kanban-column').forEach(column => {
                 const statusId = column.dataset.status;
                 const visibleCards = column.querySelectorAll('.task-card[style*="display: block"]');
@@ -1394,7 +1295,6 @@
                     countElement.textContent = count;
                 }
 
-                // Mostrar mensagem se não houver tarefas visíveis
                 const tasksContainer = column.querySelector('.tasks');
                 let emptyMessage = tasksContainer.querySelector('.empty-state-filtered');
                 if (count === 0) {
@@ -1437,29 +1337,9 @@
         // ===============================
         function saveTask(taskId) {
             const form = document.getElementById("taskForm" + taskId);
-            
             if (!form) {
                 console.error("Form não encontrado para task:", taskId);
                 return;
-            }
-            
-            const responsavelSelect = document.getElementById("responsavel-select-" + taskId);
-            if (responsavelSelect) {
-                const selectedValue = responsavelSelect.value;
-                if (selectedValue) {
-                    const options = responsavelSelect.options;
-                    let isValid = false;
-                    for (let i = 0; i < options.length; i++) {
-                        if (options[i].value === selectedValue) {
-                            isValid = true;
-                            break;
-                        }
-                    }
-                    if (!isValid) {
-                        alert("O responsável selecionado não pertence a este setor.");
-                        return;
-                    }
-                }
             }
             
             const formData = new FormData(form);
@@ -1492,9 +1372,7 @@
             const input = document.getElementById("comment-input-" + taskId);
             const texto = input.value.trim();
 
-            if (!texto) {
-                return;
-            }
+            if (!texto) return;
 
             const dados = new FormData();
             dados.append("comment", texto);
@@ -1546,15 +1424,11 @@
                 return;
             }
             
-            const prioridade = document.getElementById("subtask-prioridade-" + taskId).value;
-            const responsavel = document.getElementById("subtask-responsavel-" + taskId).value;
-            const dataEntrega = document.getElementById("subtask-data-entrega-" + taskId).value;
-            
             const formData = new FormData();
             formData.append("titulo", titulo);
-            formData.append("prioridade", prioridade);
-            formData.append("responsavel", responsavel);
-            formData.append("data_entrega", dataEntrega);
+            formData.append("prioridade", document.getElementById("subtask-prioridade-" + taskId).value);
+            formData.append("responsavel", document.getElementById("subtask-responsavel-" + taskId).value);
+            formData.append("data_entrega", document.getElementById("subtask-data-entrega-" + taskId).value);
             
             fetch(`/task/${taskId}/add-subtask/`, {
                 method: "POST",
@@ -1571,7 +1445,6 @@
                     modal.hide();
                     
                     adicionarSubtaskNaLista(taskId, data.subtask);
-                    
                     calcularProgresso(taskId);
                 } else {
                     alert(data.error || "Erro ao criar subtarefa");
@@ -1589,7 +1462,6 @@
         function adicionarSubtaskNaLista(taskId, subtask) {
             const container = document.getElementById("subtasks-container-" + taskId);
             
-            // Remover mensagem "Nenhuma subtarefa" se existir
             const noSubtasks = document.getElementById("no-subtasks-" + taskId);
             if (noSubtasks) {
                 noSubtasks.remove();
@@ -1600,19 +1472,15 @@
             div.id = "subtask-" + subtask.id;
             div.setAttribute("data-subtask-id", subtask.id);
             
-            const statusClass = subtask.concluida ? "bg-success" : "bg-warning";
-            const statusText = subtask.concluida ? "Concluída" : "Pendente";
-            const dataEntrega = subtask.data_entrega ? `| 📅 ${subtask.data_entrega}` : '';
-            
             div.innerHTML = `
                 <div>
                     <strong>${subtask.titulo}</strong>
                     <br>
                     <small class="text-muted">
-                        <span class="badge ${statusClass}">${statusText}</span>
+                        <span class="badge ${subtask.concluida ? 'bg-success' : 'bg-warning'}">${subtask.concluida ? 'Concluída' : 'Pendente'}</span>
                         Prioridade: ${subtask.prioridade_display}
                         ${subtask.responsavel ? `| 👤 ${subtask.responsavel}` : ''}
-                        ${dataEntrega}
+                        ${subtask.data_entrega ? `| 📅 ${subtask.data_entrega}` : ''}
                     </small>
                 </div>
                 <div>
@@ -1637,7 +1505,6 @@
             
             const taskElement = subtaskElement.closest('.modal');
             const taskId = taskElement ? taskElement.id.replace("taskModal", "") : null;
-            
             if (!taskId) return;
             
             const titulo = subtaskElement.querySelector('strong').textContent;
@@ -1668,18 +1535,13 @@
                     }
                 }
             })
-            .catch(error => {
-                console.error("Erro:", error);
-            });
+            .catch(error => console.error("Erro:", error));
             
             const taskModal = bootstrap.Modal.getInstance(document.getElementById("taskModal" + taskId));
-            if (taskModal) {
-                taskModal.hide();
-            }
+            if (taskModal) taskModal.hide();
             
             const modal = new bootstrap.Modal(document.getElementById("editSubTaskModal" + taskId));
             modal.show();
-            
             document.getElementById("editSubTaskModal" + taskId).setAttribute("data-editing-subtask", subtaskId);
         }
 
@@ -1699,33 +1561,12 @@
                 return;
             }
             
-            const prioridade = document.getElementById("edit-subtask-prioridade-" + taskId).value;
-            const concluida = document.getElementById("edit-subtask-concluida-" + taskId).value;
-            const responsavel = document.getElementById("edit-subtask-responsavel-" + taskId).value;
-            const dataEntrega = document.getElementById("edit-subtask-data-entrega-" + taskId).value;
-            
-            if (responsavel) {
-                const select = document.getElementById("edit-subtask-responsavel-" + taskId);
-                const options = select.options;
-                let isValid = false;
-                for (let i = 0; i < options.length; i++) {
-                    if (options[i].value === responsavel) {
-                        isValid = true;
-                        break;
-                    }
-                }
-                if (!isValid) {
-                    alert("O responsável selecionado não pertence a este setor.");
-                    return;
-                }
-            }
-            
             const formData = new FormData();
             formData.append("titulo", titulo);
-            formData.append("prioridade", prioridade);
-            formData.append("concluida", concluida);
-            formData.append("responsavel", responsavel);
-            formData.append("data_entrega", dataEntrega);
+            formData.append("prioridade", document.getElementById("edit-subtask-prioridade-" + taskId).value);
+            formData.append("concluida", document.getElementById("edit-subtask-concluida-" + taskId).value);
+            formData.append("responsavel", document.getElementById("edit-subtask-responsavel-" + taskId).value);
+            formData.append("data_entrega", document.getElementById("edit-subtask-data-entrega-" + taskId).value);
             
             fetch(`/subtask/${subtaskId}/update/`, {
                 method: "POST",
@@ -1765,19 +1606,15 @@
             const element = document.getElementById("subtask-" + subtask.id);
             if (!element) return;
             
-            const statusClass = subtask.concluida ? "bg-success" : "bg-warning";
-            const statusText = subtask.concluida ? "Concluída" : "Pendente";
-            const dataEntrega = subtask.data_entrega ? `| 📅 ${subtask.data_entrega}` : '';
-            
             element.innerHTML = `
                 <div>
                     <strong>${subtask.titulo}</strong>
                     <br>
                     <small class="text-muted">
-                        <span class="badge ${statusClass}">${statusText}</span>
+                        <span class="badge ${subtask.concluida ? 'bg-success' : 'bg-warning'}">${subtask.concluida ? 'Concluída' : 'Pendente'}</span>
                         Prioridade: ${subtask.prioridade_display}
                         ${subtask.responsavel ? `| 👤 ${subtask.responsavel}` : ''}
-                        ${dataEntrega}
+                        ${subtask.data_entrega ? `| 📅 ${subtask.data_entrega}` : ''}
                     </small>
                 </div>
                 <div>
@@ -1807,9 +1644,7 @@
                 return;
             }
             
-            if (!confirm("Excluir esta subtarefa?")) {
-                return;
-            }
+            if (!confirm("Excluir esta subtarefa?")) return;
             
             fetch(`/subtask/${subtaskId}/delete/`, {
                 method: "POST",
@@ -1823,9 +1658,7 @@
                     modal.hide();
                     
                     const element = document.getElementById("subtask-" + subtaskId);
-                    if (element) {
-                        element.remove();
-                    }
+                    if (element) element.remove();
                     
                     const container = document.getElementById("subtasks-container-" + taskId);
                     if (container.children.length === 0) {
@@ -1854,14 +1687,12 @@
         // EXCLUIR TAREFA
         // ===============================
         function deleteTask(id) {
-            if (!confirm("Deseja excluir esta tarefa?")) {
-                return;
-            }
+            if (!confirm("Deseja excluir esta tarefa?")) return;
             window.location.href = `/task/${id}/delete/`;
         }
 
         // ===============================
-        // QUANDO MODAL DE SUBTASK FECHAR
+        // EVENTOS DOS MODAIS
         // ===============================
         document.addEventListener('hidden.bs.modal', function(event) {
             const modalId = event.target.id;
@@ -1882,7 +1713,6 @@
             }
         });
 
-        // Recalcular progresso quando o modal é aberto
         document.addEventListener('shown.bs.modal', function(event) {
             const modal = event.target;
             if (modal.id && modal.id.startsWith('taskModal')) {

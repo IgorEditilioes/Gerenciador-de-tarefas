@@ -603,7 +603,7 @@ def add_task(request, board_id):
 @login_required
 def update_task(request, task_id):
     if request.method != "POST":
-        return JsonResponse({"success": False})
+        return JsonResponse({"success": False, "error": "Método não permitido"})
 
     task = get_object_or_404(Task, id=task_id)
     usuario = request.user
@@ -617,19 +617,21 @@ def update_task(request, task_id):
     # Verificar status "Concluído"
     novo_status_id = request.POST.get("status")
     if usuario.tipo == 'usuario':
-        status_obj = get_object_or_404(Status, id=novo_status_id)
-        if status_obj.nome.lower() in ["concluído", "concluido"]:
-            return JsonResponse(
-                {"success": False, "error": "Usuários comuns não podem concluir tarefas"},
-                status=403
-            )
+        try:
+            status_obj = get_object_or_404(Status, id=novo_status_id)
+            if status_obj.nome.lower() in ["concluído", "concluido"]:
+                return JsonResponse(
+                    {"success": False, "error": "Usuários comuns não podem concluir tarefas"},
+                    status=403
+                )
+        except:
+            pass
 
     # Verificar se o novo responsável é membro do board
     novo_responsavel_id = request.POST.get("responsavel")
     if novo_responsavel_id and novo_responsavel_id != '':
         try:
             novo_responsavel = User.objects.get(id=novo_responsavel_id)
-            # Se o usuário não for admin/gerente, verifica se é membro do board
             if usuario.tipo not in ['admin', 'gerente']:
                 is_member = BoardMember.objects.filter(
                     board=task.board,
@@ -644,18 +646,30 @@ def update_task(request, task_id):
         except User.DoesNotExist:
             pass
 
-    # 🔥 ADICIONADO: Processar data_entrega
+    # Processar data_entrega
     data_entrega = request.POST.get("data_entrega")
     if data_entrega == '':
         data_entrega = None
 
+    # Obter campos do POST
+    titulo = request.POST.get("title")
+    descricao = request.POST.get("description")
+    prioridade = request.POST.get("prioridade")
+    status_id = request.POST.get("status")
+    responsavel_id = request.POST.get("responsavel")
+
+    # Validar campos obrigatórios
+    if not titulo:
+        return JsonResponse({"success": False, "error": "Título é obrigatório"})
+
+    # Registrar histórico
     campos = {
-        "titulo": request.POST.get("title"),
-        "descricao": request.POST.get("description"),
-        "prioridade": request.POST.get("prioridade"),
-        "status": request.POST.get("status"),
-        "responsavel": request.POST.get("responsavel"),
-        "data_entrega": data_entrega  # 🔥 ADICIONADO
+        "titulo": titulo,
+        "descricao": descricao,
+        "prioridade": prioridade,
+        "status": status_id,
+        "responsavel": responsavel_id,
+        "data_entrega": data_entrega
     }
 
     for campo, novo_valor in campos.items():
@@ -666,7 +680,7 @@ def update_task(request, task_id):
         elif campo == "data_entrega":
             antigo = str(task.data_entrega) if task.data_entrega else ""
         else:
-            antigo = str(getattr(task, campo))
+            antigo = str(getattr(task, campo, ""))
 
         if str(antigo) != str(novo_valor):
             TaskHistory.objects.create(
@@ -677,20 +691,73 @@ def update_task(request, task_id):
                 valor_novo=str(novo_valor)
             )
 
-    task.titulo = campos["titulo"]
-    task.descricao = campos["descricao"]
-    task.prioridade = campos["prioridade"]
-    task.status_id = campos["status"]
-
-    responsavel_valor = campos["responsavel"]
-    task.responsavel_id = int(responsavel_valor) if responsavel_valor and responsavel_valor != '' else None
-
-    # 🔥 ADICIONADO: Atualizar data_entrega
-    task.data_entrega = campos["data_entrega"]
-
+    # Atualizar tarefa
+    task.titulo = titulo
+    task.descricao = descricao if descricao else ""
+    task.prioridade = prioridade if prioridade else "media"
+    task.status_id = status_id
+    task.responsavel_id = int(responsavel_id) if responsavel_id and responsavel_id != '' else None
+    task.data_entrega = data_entrega
     task.atualizado_por = request.user
     task.save()
 
+    return JsonResponse({"success": True})
+
+@login_required
+def update_task_status(request, task_id):
+    """
+    View específica para atualizar apenas o status da tarefa via drag and drop
+    """
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Método não permitido"})
+    
+    task = get_object_or_404(Task, id=task_id)
+    usuario = request.user
+    
+    # Verificar permissão
+    if not check_permission_edit_task(usuario, task):
+        return JsonResponse({
+            "success": False, 
+            "error": "Sem permissão para editar esta tarefa"
+        }, status=403)
+    
+    # Verificar se o status existe
+    status_id = request.POST.get("status")
+    if not status_id:
+        return JsonResponse({
+            "success": False, 
+            "error": "Status não informado"
+        }, status=400)
+    
+    try:
+        novo_status = Status.objects.get(id=status_id, workflow__board=task.board)
+    except Status.DoesNotExist:
+        return JsonResponse({
+            "success": False, 
+            "error": "Status inválido"
+        }, status=400)
+    
+    # Usuário comum não pode mover para "Concluído"
+    if usuario.tipo == 'usuario' and novo_status.nome.lower() in ["concluído", "concluido"]:
+        return JsonResponse({
+            "success": False, 
+            "error": "Usuários comuns não podem concluir tarefas"
+        }, status=403)
+    
+    # Registrar histórico
+    TaskHistory.objects.create(
+        task=task,
+        usuario=request.user,
+        campo="Status",
+        valor_antigo=task.status.nome,
+        valor_novo=novo_status.nome
+    )
+    
+    # Atualizar status
+    task.status = novo_status
+    task.atualizado_por = request.user
+    task.save()
+    
     return JsonResponse({"success": True})
 
 

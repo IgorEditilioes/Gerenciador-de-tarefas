@@ -16,7 +16,8 @@ from .views import (
     get_subtasks,
     create_board,
     get_responsaveis_board,
-    buscar_responsaveis
+    buscar_responsaveis,
+    update_task_status
 )
 
 urlpatterns = [
@@ -66,4 +67,6 @@ urlpatterns = [
 
     path('buscar-responsaveis/', buscar_responsaveis, name='buscar_responsaveis'),
     path('get-responsaveis-setor/', get_responsaveis_board, name='get_responsaveis_setor'),
+
+    path('task/<int:task_id>/update-status/', update_task_status, name='update_task_status'),
 ]
