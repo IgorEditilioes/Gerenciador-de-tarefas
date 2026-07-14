@@ -2,7 +2,6 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 
-# Usuário customizado
 class User(AbstractUser):
 
     TIPOS = (
@@ -36,7 +35,6 @@ class User(AbstractUser):
 
 
 
-# Empresa / Ambiente
 class Workspace(models.Model):
 
     nome = models.CharField(
@@ -55,7 +53,6 @@ class Workspace(models.Model):
 
 
 
-# Setor / Board
 class Board(models.Model):
 
     workspace = models.ForeignKey(
@@ -91,7 +88,6 @@ class Board(models.Model):
 
 
 
-# Usuários dentro do setor
 class BoardMember(models.Model):
 
     PERFIS = (
@@ -130,7 +126,6 @@ class BoardMember(models.Model):
 
 
 
-# Workflow
 class Workflow(models.Model):
 
     board = models.ForeignKey(
@@ -165,7 +160,6 @@ class Workflow(models.Model):
 
 
 
-# Status
 class Status(models.Model):
 
     workflow = models.ForeignKey(
@@ -204,8 +198,6 @@ class Status(models.Model):
 
 
 
-
-# Tarefa principal
 class Task(models.Model):
 
     PRIORIDADES = (
@@ -296,8 +288,6 @@ class Task(models.Model):
 
 
 
-
-# Comentários
 class Comment(models.Model):
 
     task = models.ForeignKey(
@@ -333,8 +323,6 @@ class Comment(models.Model):
 
 
 
-
-# Subtarefas com estrutura semelhante a Task
 class SubTask(models.Model):
 
 
@@ -427,7 +415,6 @@ class SubTask(models.Model):
 
 
 
-
 class TaskHistory(models.Model):
 
     task = models.ForeignKey(
@@ -466,3 +453,69 @@ class TaskHistory(models.Model):
 
     def __str__(self):
         return f"{self.task.titulo} - {self.campo}"
+    
+
+
+class Notification(models.Model):
+    TIPOS = (
+        ('comentario', 'Comentário'),
+        ('mencao', 'Menção'),
+        ('atribuicao', 'Atribuição'),
+        ('subtarefa', 'Subtarefa Concluída'),
+        ('vencimento', 'Vencimento Próximo'),
+    )
+    
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='notificacoes'
+    )
+    
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPOS
+    )
+    
+    mensagem = models.TextField()
+    
+    task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='notificacoes'
+    )
+    
+    comentario = models.ForeignKey(
+        Comment,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='notificacoes'
+    )
+    
+    subtask = models.ForeignKey(
+        SubTask,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='notificacoes'
+    )
+    
+    origem = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='notificacoes_criadas'
+    )
+    
+    lida = models.BooleanField(default=False)
+    
+    criado_em = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-criado_em']
+    
+    def __str__(self):
+        return f"{self.usuario} - {self.tipo} - {self.criado_em}"

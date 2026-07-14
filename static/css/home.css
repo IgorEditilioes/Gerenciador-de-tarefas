@@ -603,3 +603,15 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: #b0b8c8;
 }
+
+/* Animação do sino com notificação */
+@keyframes bell-ring {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(10deg); }
+    75% { transform: rotate(-10deg); }
+}
+
+#sino-notificacoes .fa-bell.has-notification {
+    animation: bell-ring 0.5s ease;
+    color: #667eea;
+}

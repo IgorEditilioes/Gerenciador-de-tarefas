@@ -17,7 +17,12 @@ from .views import (
     create_board,
     get_responsaveis_board,
     buscar_responsaveis,
-    update_task_status
+    update_task_status,
+    get_notificacoes,
+    marcar_notificacao_lida,
+    marcar_todas_notificacoes_lidas,
+    open_task_direct,
+    get_task_board
 )
 
 urlpatterns = [
@@ -36,7 +41,7 @@ urlpatterns = [
     # BOARD
     # ======================
     path("board/<int:board_id>/", board_view, name="board"),
-    path("board/create/", create_board, name="create_board"),  # 👈 ADICIONADO
+    path("board/create/", create_board, name="create_board"),
 
     # ======================
     # TASKS
@@ -44,6 +49,7 @@ urlpatterns = [
     path("board/<int:board_id>/add-task/", add_task, name="add_task"),
     path("task/update/<int:task_id>/", update_task, name="update_task"),
     path("task/<int:task_id>/delete/", delete_task, name="delete_task"),
+    path("task/<int:task_id>/update-status/", update_task_status, name="update_task_status"),
 
     # ======================
     # SUBTASKS
@@ -59,14 +65,24 @@ urlpatterns = [
     # ======================
     path("task/<int:task_id>/comment/", add_comment, name="add_comment"),
 
+    # ======================
+    # PERFIL
+    # ======================
+    path('perfil/<int:id>/', perfil, name="perfil"),
 
     # ======================
-    # Perfil
+    # RESPONSÁVEIS (API)
     # ======================
-    path('perfil/<int:id>', perfil, name="perfil"),
-
     path('buscar-responsaveis/', buscar_responsaveis, name='buscar_responsaveis'),
-    path('get-responsaveis-setor/', get_responsaveis_board, name='get_responsaveis_setor'),
+    path('get-responsaveis-board/<int:board_id>/', get_responsaveis_board, name='get_responsaveis_board'),
 
-    path('task/<int:task_id>/update-status/', update_task_status, name='update_task_status'),
+    # ======================
+    # NOTIFICAÇÕES
+    # ======================
+    path('notificacoes/', get_notificacoes, name='get_notificacoes'),
+    path('notificacao/<int:notificacao_id>/marcar-lida/', marcar_notificacao_lida, name='marcar_notificacao_lida'),
+    path('notificacoes/marcar-todas-lidas/', marcar_todas_notificacoes_lidas, name='marcar_todas_notificacoes_lidas'),
+
+    path('task/<int:task_id>/open/', open_task_direct, name='open_task_direct'),
+    path('task/<int:task_id>/get-board/', get_task_board, name='get_task_board'),
 ]

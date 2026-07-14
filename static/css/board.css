@@ -910,3 +910,102 @@ body {
         font-size: 11px;
     }
 }
+
+/* Estilos para menções (@) */
+.mention-tag {
+    background-color: #e8f0fe;
+    color: #1a73e8;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+    display: inline-block;
+    margin: 0 2px;
+}
+
+.mention-tag i {
+    font-size: 10px;
+    margin-right: 3px;
+}
+
+/* Estilos do At.js (autocomplete) */
+.atwho-container {
+    z-index: 9999 !important;
+}
+
+.atwho-view {
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12) !important;
+    padding: 4px 0 !important;
+    max-height: 200px !important;
+    overflow-y: auto !important;
+    min-width: 250px !important;
+}
+
+.atwho-view .cur {
+    background: #f0f4ff !important;
+    border-radius: 4px !important;
+}
+
+.atwho-view ul li {
+    padding: 8px 12px !important;
+    border-bottom: 1px solid #f0f2f7 !important;
+}
+
+.atwho-view ul li:last-child {
+    border-bottom: none !important;
+}
+
+.atwho-view ul li img {
+    border-radius: 50% !important;
+    width: 28px !important;
+    height: 28px !important;
+    object-fit: cover !important;
+    margin-right: 8px !important;
+}
+
+.atwho-view ul li strong {
+    color: #1a1a2e !important;
+    font-size: 13px !important;
+}
+
+.atwho-view ul li small {
+    color: #8b92a5 !important;
+    font-size: 11px !important;
+}
+
+/* Comentários com menções */
+.comment-box .mention-tag {
+    background-color: #e8f0fe;
+    color: #1a73e8;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+    display: inline-block;
+    margin: 0 2px;
+    cursor: pointer;
+}
+
+.comment-box .mention-tag:hover {
+    background-color: #d2e3fc;
+    text-decoration: underline;
+}
+
+/* Textareas com suporte a menção */
+.mention-textarea:focus {
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+}
+
+/* Animação do sino com notificação */
+@keyframes bell-ring {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(10deg); }
+    75% { transform: rotate(-10deg); }
+}
+
+#sino-notificacoes .fa-bell.has-notification {
+    animation: bell-ring 0.5s ease;
+    color: #667eea;
+}

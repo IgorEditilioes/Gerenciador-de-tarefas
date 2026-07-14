@@ -1,48 +1,293 @@
 <!-- navbar.html -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
     <div class="container-fluid">
+        <!-- Logo -->
         <a class="navbar-brand fw-bold" href="{% url 'home' %}">
-            <i class="fas fa-tasks"></i> Gerenciador
+            <i class="fas fa-tasks" style="color: #667eea;"></i> 
+            <strong>TaskFlow</strong>
         </a>
 
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu">
+        <!-- Botão Toggler (Mobile) -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <div class="collapse navbar-collapse" id="menu">
-            <ul class="navbar-nav ms-auto">
-
-
+        <!-- Menu -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-center">
                 
-                <!-- Dropdown do Usuário -->
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user-circle"></i>
-                        Olá, <strong>{{ user.get_full_name|default:user.username }}</strong>
+                <!-- Link Home -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'home' %}">
+                        <i class="fas fa-home"></i> Home
                     </a>
-
+                </li>
+                
+                <!-- ==========================
+                SINO DE NOTIFICAÇÕES (GLOBAL)
+                ========================== -->
+                <li class="nav-item dropdown" id="notificacoes-dropdown">
+                    <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" id="sino-notificacoes">
+                        <i class="fas fa-bell" style="font-size: 20px;"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
+                              id="contador-notificacoes" 
+                              style="font-size: 10px; display: none;">
+                            0
+                        </span>
+                    </a>
+                    
+                    <!-- Dropdown de Notificações -->
+                    <ul class="dropdown-menu dropdown-menu-end" id="lista-notificacoes" style="width: 380px; max-height: 500px; overflow-y: auto; padding: 0;">
+                        <li class="dropdown-header d-flex justify-content-between align-items-center" style="padding: 12px 16px; background: #f8f9fa; border-radius: 8px 8px 0 0;">
+                            <span style="font-weight: 600;">Notificações</span>
+                            <button class="btn btn-sm btn-link" onclick="marcarTodasLidas()" style="text-decoration: none; font-size: 12px;">
+                                Marcar todas como lidas
+                            </button>
+                        </li>
+                        <div id="conteudo-notificacoes">
+                            <!-- As notificações serão carregadas via JavaScript -->
+                            <li class="dropdown-item text-center text-muted py-3" id="loading-notificacoes">
+                                <i class="fas fa-spinner fa-spin"></i> Carregando...
+                            </li>
+                        </div>
+                        <li class="dropdown-footer text-center" style="padding: 10px; background: #f8f9fa; border-radius: 0 0 8px 8px;">
+                            <a href="#" class="text-muted" style="text-decoration: none; font-size: 12px;" onclick="carregarNotificacoes()">
+                                <i class="fas fa-sync-alt"></i> Atualizar
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                
+                <!-- ==========================
+                PERFIL DO USUÁRIO
+                ========================== -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+                        {% if user.avatar %}
+                        <img src="{{ user.avatar.url }}" alt="Avatar" class="rounded-circle me-1" style="width: 32px; height: 32px; object-fit: cover;">
+                        {% else %}
+                        <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center me-1" style="width: 32px; height: 32px; font-size: 14px; font-weight: 600;">
+                            {{ user.first_name|first|default:user.username|first|upper }}
+                        </div>
+                        {% endif %}
+                        <span class="d-none d-md-inline">
+                            {{ user.first_name|default:user.username }}
+                        </span>
+                    </a>
+                    
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>
-                            <a class="dropdown-item {% if request.resolver_match.url_name == 'perfil' %}active{% endif %}" 
-                               href="{% url 'perfil' user.id %}">
-                                <i class="fas fa-user-edit"></i> Meu perfil
+                            <span class="dropdown-item-text">
+                                <strong>{{ user.get_full_name|default:user.username }}</strong>
+                                <br>
+                                <small class="text-muted">{{ user.email }}</small>
+                            </span>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'perfil' user.id %}">
+                                <i class="fas fa-user-circle me-2"></i> Meu Perfil
                             </a>
                         </li>
                         <li>
                             <a class="dropdown-item" href="{% url 'perfil' user.id %}#tab-senha">
-                                <i class="fas fa-lock"></i> Alterar Senha
+                                <i class="fas fa-lock me-2"></i> Alterar Senha
                             </a>
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <a class="dropdown-item text-danger" href="{% url 'logout' %}">
-                                <i class="fas fa-sign-out-alt"></i> Sair
+                                <i class="fas fa-sign-out-alt me-2"></i> Sair
                             </a>
                         </li>
                     </ul>
                 </li>
+                
             </ul>
         </div>
     </div>
 </nav>
 
+<!-- =====================================================
+     SCRIPTS DO NAVBAR (NOTIFICAÇÕES)
+     ===================================================== -->
+<script>
+    // ===============================
+    // FUNÇÕES DE NOTIFICAÇÃO (GLOBAIS)
+    // ===============================
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function carregarNotificacoes() {
+        const container = document.getElementById('conteudo-notificacoes');
+        if (!container) return;
+        
+        fetch('/notificacoes/', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const contador = document.getElementById('contador-notificacoes');
+            
+            if (data.total_nao_lidas > 0) {
+                contador.textContent = data.total_nao_lidas;
+                contador.style.display = 'inline';
+            } else {
+                contador.style.display = 'none';
+            }
+            
+            if (data.notificacoes.length === 0) {
+                container.innerHTML = `
+                    <li class="dropdown-item text-center text-muted py-4">
+                        <i class="fas fa-bell-slash" style="font-size: 32px; display: block; margin-bottom: 8px;"></i>
+                        Nenhuma notificação
+                    </li>
+                `;
+            } else {
+                let html = '';
+                data.notificacoes.forEach(notif => {
+                    const bgColor = notif.lida ? '' : 'background-color: #f0f4ff;';
+                    const borderColor = notif.lida ? '' : 'border-left: 3px solid #667eea;';
+                    
+                    html += `
+                        <li class="dropdown-item" style="${bgColor} ${borderColor} padding: 12px 16px; cursor: pointer;" 
+                            onclick="abrirNotificacao(${notif.id}, '${notif.tipo}', ${notif.task_id || 'null'})">
+                            <div class="d-flex align-items-start">
+                                <div class="flex-shrink-0" style="margin-right: 12px;">
+                                    <div style="width: 36px; height: 36px; border-radius: 50%; background: ${notif.cor}20; display: flex; align-items: center; justify-content: center; color: ${notif.cor};">
+                                        <i class="fas ${notif.icone}"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div style="font-size: 13px; color: #1a1a2e; line-height: 1.4;">${notif.mensagem}</div>
+                                    <small class="text-muted" style="font-size: 11px;">
+                                        <i class="far fa-clock"></i> ${notif.criado_em}
+                                        ${!notif.lida ? '<span class="badge bg-primary ms-2" style="font-size: 9px;">Nova</span>' : ''}
+                                    </small>
+                                </div>
+                            </div>
+                        </li>
+                    `;
+                });
+                container.innerHTML = html;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar notificações:', error);
+            container.innerHTML = `
+                <li class="dropdown-item text-center text-danger py-3">
+                    <i class="fas fa-exclamation-circle"></i> Erro ao carregar notificações
+                </li>
+            `;
+        });
+    }
+
+    // ===============================
+    // ABRIR NOTIFICAÇÃO (CORRIGIDO)
+    // ===============================
+    function abrirNotificacao(notificacaoId, tipo, taskId) {
+        // Marcar como lida
+        fetch(`/notificacao/${notificacaoId}/marcar-lida/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        if (taskId) {
+            const dropdown = bootstrap.Dropdown.getInstance(document.getElementById('sino-notificacoes'));
+            if (dropdown) dropdown.hide();
+            
+            // 🔥 VERIFICAR SE ESTÁ NO BOARD
+            // Se a função openTaskModal existe, estamos no board
+            if (typeof openTaskModal === 'function') {
+                // Está no board - abrir o modal da tarefa
+                console.log('✅ Abrindo modal da tarefa:', taskId);
+                openTaskModal(taskId);
+            } else {
+                // Está na home - buscar o board da tarefa primeiro
+                console.log('📌 Buscando board da tarefa:', taskId);
+                
+                fetch(`/task/${taskId}/get-board/`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Tarefa não encontrada');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success && data.board_id) {
+                        // 🔥 CORRETO: Usar o board_id retornado
+                        console.log('✅ Redirecionando para board:', data.board_id);
+                        window.location.href = `/board/${data.board_id}/?open_task=${taskId}`;
+                    } else {
+                        alert('Erro ao acessar a tarefa.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('Esta tarefa não existe mais ou foi removida.');
+                });
+            }
+        }
+    }
+
+    function marcarTodasLidas() {
+        if (!confirm('Marcar todas as notificações como lidas?')) return;
+        
+        fetch('/notificacoes/marcar-todas-lidas/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('contador-notificacoes').style.display = 'none';
+                carregarNotificacoes();
+            }
+        });
+    }
+
+    // ===============================
+    // INICIALIZAR NOTIFICAÇÕES
+    // ===============================
+    document.addEventListener('DOMContentLoaded', function() {
+        const sino = document.getElementById('sino-notificacoes');
+        if (sino) {
+            sino.addEventListener('click', function() {
+                carregarNotificacoes();
+            });
+        }
+        
+        // Carregar contador inicial
+        setTimeout(carregarNotificacoes, 500);
+    });
+
+    // Atualizar notificações a cada 60 segundos
+    setInterval(() => {
+        carregarNotificacoes();
+    }, 60000);
+</script>
