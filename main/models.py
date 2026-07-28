@@ -519,3 +519,102 @@ class Notification(models.Model):
     
     def __str__(self):
         return f"{self.usuario} - {self.tipo} - {self.criado_em}"
+
+
+# =========================
+# ANEXOS
+# =========================
+class Attachment(models.Model):
+    """
+    Modelo para anexos de tarefas
+    """
+    task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        related_name='anexos'
+    )
+    
+    arquivo = models.FileField(
+        upload_to='anexos/%Y/%m/%d/',
+        max_length=255
+    )
+    
+    nome = models.CharField(
+        max_length=255,
+        blank=True
+    )
+    
+    tamanho = models.PositiveIntegerField(
+        default=0
+    )
+    
+    tipo = models.CharField(
+        max_length=100,
+        blank=True
+    )
+    
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='anexos_enviados'
+    )
+    
+    criado_em = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-criado_em']
+    
+    def __str__(self):
+        return self.nome or self.arquivo.name
+    
+    def get_tamanho_formatado(self):
+        """Retorna o tamanho formatado (KB, MB, GB)"""
+        if self.tamanho < 1024:
+            return f"{self.tamanho} B"
+        elif self.tamanho < 1024 * 1024:
+            return f"{self.tamanho / 1024:.1f} KB"
+        elif self.tamanho < 1024 * 1024 * 1024:
+            return f"{self.tamanho / (1024 * 1024):.1f} MB"
+        else:
+            return f"{self.tamanho / (1024 * 1024 * 1024):.1f} GB"
+    
+    def get_icone(self):
+        """Retorna o ícone baseado no tipo do arquivo"""
+        if not self.tipo:
+            return 'fa-file'
+        
+        tipo = self.tipo.lower()
+        if 'image' in tipo:
+            return 'fa-file-image'
+        elif 'pdf' in tipo:
+            return 'fa-file-pdf'
+        elif 'word' in tipo or 'document' in tipo:
+            return 'fa-file-word'
+        elif 'excel' in tipo or 'sheet' in tipo:
+            return 'fa-file-excel'
+        elif 'powerpoint' in tipo or 'presentation' in tipo:
+            return 'fa-file-powerpoint'
+        elif 'zip' in tipo or 'rar' in tipo or 'compressed' in tipo:
+            return 'fa-file-archive'
+        elif 'text' in tipo:
+            return 'fa-file-alt'
+        else:
+            return 'fa-file'
+    
+    def get_cor_icone(self):
+        """Retorna a cor do ícone baseado no tipo"""
+        tipo = self.tipo.lower() if self.tipo else ''
+        if 'image' in tipo:
+            return '#8b5cf6'
+        elif 'pdf' in tipo:
+            return '#ef4444'
+        elif 'word' in tipo or 'document' in tipo:
+            return '#3b82f6'
+        elif 'excel' in tipo or 'sheet' in tipo:
+            return '#22c55e'
+        elif 'powerpoint' in tipo or 'presentation' in tipo:
+            return '#f59e0b'
+        else:
+            return '#6b7280'

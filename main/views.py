@@ -6,11 +6,23 @@ from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_http_methods
 from django.db.models import Count, Q
 from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 import json
 import re
+import os
+import uuid
+import logging
 from datetime import datetime
 
 from .forms import LoginForm, PerfilForm
+from .utils import (
+    enviar_email_notificacao, 
+    notificar_email_atribuicao, 
+    notificar_email_mencao, 
+    notificar_email_status_concluido
+)
 from .models import (
     User,
     Task,
@@ -22,6 +34,7 @@ from .models import (
     Workflow,
     BoardMember,
     Notification,
+    Attachment,
 )
 from .decorators import (
     admin_required,
@@ -39,6 +52,9 @@ from .decorators import (
     check_permission_complete_task,
     board_access_required,
 )
+
+# Configurar logger
+logger = logging.getLogger(__name__)
 
 
 # =========================
@@ -61,6 +77,28 @@ def criar_notificacao(usuario, tipo, mensagem, origem=None, task=None, comentari
     )
 
 
+def notificar_atribuicao(usuario, task, responsavel_anterior=None):
+    """Cria notificação para atribuição de tarefa"""
+    if not usuario:
+        return
+    
+    # Não notificar se a pessoa já era o responsável
+    if responsavel_anterior and responsavel_anterior == usuario:
+        return
+    
+    mensagem = f"Você foi atribuído à tarefa: '{task.titulo}'"
+    criar_notificacao(
+        usuario=usuario,
+        tipo='atribuicao',
+        mensagem=mensagem,
+        origem=task.atualizado_por,
+        task=task
+    )
+    
+    # 🔥 ENVIAR E-MAIL
+    notificar_email_atribuicao(usuario, task)
+
+
 def notificar_mencao(usuario, comentario, task):
     """Cria notificação para menção em comentário"""
     if not usuario:
@@ -76,42 +114,36 @@ def notificar_mencao(usuario, comentario, task):
         task=task,
         comentario=comentario
     )
+    
+    # 🔥 ENVIAR E-MAIL
+    notificar_email_mencao(usuario, comentario, task)
 
 
-def notificar_atribuicao(usuario, task, responsavel_anterior=None):
-    """Cria notificação para atribuição de tarefa"""
-    if not usuario:
+def notificar_status_concluido(task, usuario):
+    """
+    Cria notificação no sistema quando uma tarefa é concluída
+    """
+    if not task.responsavel:
         return
     
-    mensagem = f"Você foi atribuído à tarefa: '{task.titulo}'"
+    if task.responsavel == usuario:
+        return
+    
+    nome_origem = usuario.get_full_name() or usuario.username
+    mensagem = f"{nome_origem} concluiu a tarefa: '{task.titulo}'"
     criar_notificacao(
-        usuario=usuario,
+        usuario=task.responsavel,
         tipo='atribuicao',
         mensagem=mensagem,
-        origem=task.atualizado_por,
+        origem=usuario,
         task=task
     )
 
 
-def notificar_subtask_concluida(task, subtask):
-    """Notifica o responsável da tarefa quando uma subtarefa é concluída"""
-    if not task.responsavel:
-        return
-    
-    if task.responsavel == subtask.criado_por:
-        return  # Não notificar se a mesma pessoa concluiu
-    
-    nome_origem = subtask.criado_por.get_full_name() or subtask.criado_por.username
-    mensagem = f"Subtarefa '{subtask.titulo}' foi concluída por {nome_origem}"
-    criar_notificacao(
-        usuario=task.responsavel,
-        tipo='subtarefa',
-        mensagem=mensagem,
-        origem=subtask.criado_por,
-        task=task,
-        subtask=subtask
-    )
-
+# =========================
+# LOGIN
+# =========================
+# ... resto do código ...
 
 # =========================
 # LOGIN
@@ -446,9 +478,9 @@ def create_board(request):
     return redirect("home")
 
 
-# views.py - Adicione esta função
-
-
+# =========================
+# OPEN TASK DIRECT
+# =========================
 @login_required
 def open_task_direct(request, task_id):
     """
@@ -462,20 +494,16 @@ def open_task_direct(request, task_id):
     
     usuario = request.user
     
-    # Verificar se o usuário tem permissão para ver a tarefa
     if not check_permission_user_board(usuario, task.board):
         messages.error(request, "Você não tem permissão para acessar esta tarefa.")
         return redirect('home')
     
-    # 🔥 REDIRECIONAR PARA O BOARD CORRETO
     return redirect(f"/board/{task.board.id}/?open_task={task.id}")
 
 
 # =========================
 # BOARD VIEW
 # =========================
-
-
 @login_required
 @board_access_required
 def board_view(request, board_id):
@@ -516,7 +544,6 @@ def board_view(request, board_id):
     today = date.today()
     today_plus_3 = today + timedelta(days=3)
 
-    # 🔥 VERIFICAR SE DEVE ABRIR UMA TAREFA ESPECÍFICA
     open_task_id = request.GET.get('open_task')
     
     return render(
@@ -530,11 +557,14 @@ def board_view(request, board_id):
             "user_tipo": usuario.tipo,
             "today": today,
             "today_plus_3": today_plus_3,
-            "open_task_id": open_task_id,  # 🔥 Passar o ID da tarefa para abrir
+            "open_task_id": open_task_id,
         }
     )
 
 
+# =========================
+# GET TASK BOARD
+# =========================
 @login_required
 def get_task_board(request, task_id):
     """Retorna o board_id da tarefa para redirecionamento"""
@@ -548,7 +578,6 @@ def get_task_board(request, task_id):
     
     usuario = request.user
     
-    # Verificar se o usuário tem permissão para ver a tarefa
     if not check_permission_user_board(usuario, task.board):
         return JsonResponse({
             'success': False, 
@@ -561,6 +590,7 @@ def get_task_board(request, task_id):
         'task_id': task.id,
         'task_title': task.titulo
     })
+
 
 # =========================
 # ADD TASK
@@ -658,7 +688,6 @@ def add_task(request, board_id):
         valor_novo="Tarefa criada"
     )
 
-    # Notificar responsável se houver
     if task.responsavel and task.responsavel != usuario:
         notificar_atribuicao(task.responsavel, task)
 
@@ -667,8 +696,10 @@ def add_task(request, board_id):
 
 
 # =========================
-# UPDATE TASK (COM NOTIFICAÇÃO DE ATRIBUIÇÃO)
+# UPDATE TASK
 # =========================
+# views.py - Atualize a função update_task
+
 @login_required
 def update_task(request, task_id):
     if request.method != "POST":
@@ -677,19 +708,17 @@ def update_task(request, task_id):
     task = get_object_or_404(Task, id=task_id)
     usuario = request.user
     
-    # Verificar permissão - Agora o gerente pode editar qualquer tarefa do setor
     if not check_permission_edit_task(usuario, task):
         return JsonResponse(
             {"success": False, "error": "Sem permissão para editar esta tarefa"},
             status=403
         )
 
-    # Guardar responsável anterior para verificar mudança
     responsavel_anterior = task.responsavel
+    status_anterior = task.status  # 🔥 GUARDAR STATUS ANTERIOR
 
     novo_status_id = request.POST.get("status")
     
-    # Verificar se usuário comum está tentando concluir tarefa
     if usuario.tipo == 'usuario':
         try:
             status_obj = get_object_or_404(Status, id=novo_status_id)
@@ -705,7 +734,6 @@ def update_task(request, task_id):
     if novo_responsavel_id and novo_responsavel_id != '':
         try:
             novo_responsavel = User.objects.get(id=novo_responsavel_id)
-            # Usuário comum só pode atribuir para membros do board
             if usuario.tipo == 'usuario':
                 is_member = BoardMember.objects.filter(
                     board=task.board,
@@ -770,15 +798,22 @@ def update_task(request, task_id):
     task.atualizado_por = request.user
     task.save()
 
-    # Notificar novo responsável
+    # 🔥 VERIFICAR SE O STATUS MUDOU PARA "CONCLUÍDO"
+    novo_status = task.status
+    if (status_anterior.id != novo_status.id and 
+        novo_status.nome.lower() in ["concluído", "concluido"]):
+        # Enviar e-mail para o responsável
+        notificar_email_status_concluido(task, usuario)
+        # Criar notificação no sino
+        notificar_status_concluido(task, usuario)
+
     if task.responsavel and task.responsavel != responsavel_anterior:
         notificar_atribuicao(task.responsavel, task, responsavel_anterior)
 
     return JsonResponse({"success": True})
 
 
-
-# =======================
+# =========================
 # UPDATE TASK STATUS (DRAG AND DROP)
 # =========================
 @login_required
@@ -834,15 +869,12 @@ def update_task_status(request, task_id):
 # =========================
 # DELETE TASK
 # =========================
-# views.py - DELETE TASK (corrigido para gerente)
-
 @login_required
 def delete_task(request, task_id):
     task = get_object_or_404(Task, id=task_id)
     usuario = request.user
     board_id = task.board.id
     
-    # Verificar permissão - Agora o gerente pode excluir qualquer tarefa do setor
     if not check_permission_delete_task(usuario, task):
         messages.error(request, "Você não tem permissão para excluir esta tarefa.")
         return redirect("board", board_id=board_id)
@@ -855,6 +887,7 @@ def delete_task(request, task_id):
 # =========================
 # COMPLETE TASK
 # =========================
+
 @login_required
 def complete_task(request, task_id):
     task = get_object_or_404(Task, id=task_id)
@@ -891,6 +924,10 @@ def complete_task(request, task_id):
             valor_antigo="",
             valor_novo="Concluído"
         )
+        
+        # 🔥 ENVIAR E-MAIL E NOTIFICAÇÃO
+        notificar_email_status_concluido(task, usuario)
+        notificar_status_concluido(task, usuario)
         
         messages.success(request, "Tarefa concluída com sucesso!")
     else:
@@ -943,18 +980,16 @@ def add_comment(request, task_id):
         texto=texto
     )
 
-    # 🔥 DETECTAR MENÇÕES NO COMENTÁRIO
     padrao = r'@(\w+)'
     mencoes = re.findall(padrao, texto)
     
-    # Buscar usuários mencionados
     membros_board = BoardMember.objects.filter(board=task.board).values_list('usuario__username', flat=True)
     
     for username in mencoes:
         if username in membros_board:
             try:
                 usuario_mencionado = User.objects.get(username=username)
-                if usuario_mencionado != usuario:  # Não notificar a si mesmo
+                if usuario_mencionado != usuario:
                     notificar_mencao(usuario_mencionado, comment, task)
             except User.DoesNotExist:
                 pass
@@ -964,6 +999,217 @@ def add_comment(request, task_id):
         "username": request.user.username,
         "texto": comment.texto,
         "comment_id": comment.id
+    })
+
+
+# =========================
+# ANEXOS (CORRIGIDO)
+# =========================
+
+@login_required
+def upload_anexo(request, task_id):
+    """
+    Upload de anexo para uma tarefa
+    """
+    logger.info("=" * 50)
+    logger.info("📁 UPLOAD ANEXO INICIADO")
+    logger.info(f"📋 Task ID: {task_id}")
+    
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Método não permitido"})
+    
+    task = get_object_or_404(Task, id=task_id)
+    usuario = request.user
+    
+    logger.info(f"👤 Usuário: {usuario.username}")
+    logger.info(f"📊 FILES: {request.FILES}")
+    
+    # Verificar permissão
+    if not check_permission_user_board(usuario, task.board):
+        return JsonResponse({
+            "success": False, 
+            "error": "Sem permissão para anexar arquivos a esta tarefa"
+        }, status=403)
+    
+    arquivo = request.FILES.get('arquivo')
+    if not arquivo:
+        logger.error("❌ Nenhum arquivo enviado")
+        return JsonResponse({
+            "success": False, 
+            "error": "Nenhum arquivo enviado"
+        }, status=400)
+    
+    logger.info(f"📄 Nome: {arquivo.name}")
+    logger.info(f"📊 Tamanho: {arquivo.size} bytes")
+    logger.info(f"📋 Tipo: {arquivo.content_type}")
+    
+    # Validar tamanho (10MB)
+    if arquivo.size > 10 * 1024 * 1024:
+        logger.error(f"❌ Arquivo muito grande: {arquivo.size} bytes")
+        return JsonResponse({
+            "success": False, 
+            "error": "Arquivo muito grande. Máximo permitido: 10MB"
+        }, status=400)
+    
+    # Validar extensão
+    extensoes_permitidas = [
+        '.pdf', '.doc', '.docx', '.xls', '.xlsx', 
+        '.ppt', '.pptx', '.txt', '.csv',
+        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg',
+        '.zip', '.rar', '.7z'
+    ]
+    
+    nome_arquivo = arquivo.name.lower()
+    extensao = ''
+    for ext in extensoes_permitidas:
+        if nome_arquivo.endswith(ext):
+            extensao = ext
+            break
+    
+    if not extensao:
+        logger.error(f"❌ Extensão não permitida: {nome_arquivo}")
+        return JsonResponse({
+            "success": False, 
+            "error": f"Tipo de arquivo não permitido. Permitidos: {', '.join(extensoes_permitidas)}"
+        }, status=400)
+    
+    try:
+        # Gerar nome único
+        import uuid
+        from datetime import datetime
+        
+        nome_unico = f"{uuid.uuid4().hex}_{datetime.now().strftime('%Y%m%d%H%M%S')}{extensao}"
+        
+        # Criar a pasta se não existir
+        pasta_anexos = os.path.join(settings.MEDIA_ROOT, 'anexos', str(task.board.id), str(task.id))
+        os.makedirs(pasta_anexos, exist_ok=True)
+        
+        # Caminho relativo para o banco
+        caminho_relativo = f"anexos/{task.board.id}/{task.id}/{nome_unico}"
+        caminho_completo = os.path.join(settings.MEDIA_ROOT, caminho_relativo)
+        
+        logger.info(f"📁 Salvando em: {caminho_completo}")
+        
+        # Salvar o arquivo
+        with open(caminho_completo, 'wb+') as destination:
+            for chunk in arquivo.chunks():
+                destination.write(chunk)
+        
+        logger.info("✅ Arquivo salvo com sucesso")
+        
+        # Criar o anexo no banco de dados
+        anexo = Attachment.objects.create(
+            task=task,
+            arquivo=caminho_relativo,
+            nome=arquivo.name,
+            tamanho=arquivo.size,
+            tipo=arquivo.content_type,
+            uploaded_by=usuario
+        )
+        
+        logger.info(f"✅ Anexo criado no banco: ID {anexo.id}")
+        logger.info("=" * 50)
+        
+        # Notificar responsável da tarefa
+        if task.responsavel and task.responsavel != usuario:
+            mensagem = f"{usuario.get_full_name() or usuario.username} anexou um arquivo à tarefa: '{task.titulo}'"
+            criar_notificacao(
+                usuario=task.responsavel,
+                tipo='comentario',
+                mensagem=mensagem,
+                origem=usuario,
+                task=task
+            )
+        
+        return JsonResponse({
+            "success": True,
+            "anexo": {
+                "id": anexo.id,
+                "nome": anexo.nome,
+                "tamanho": anexo.get_tamanho_formatado(),
+                "tamanho_bytes": anexo.tamanho,
+                "tipo": anexo.tipo,
+                "icone": anexo.get_icone(),
+                "cor_icone": anexo.get_cor_icone(),
+                "url": anexo.arquivo.url,
+                "uploaded_by": anexo.uploaded_by.get_full_name() or anexo.uploaded_by.username,
+                "criado_em": anexo.criado_em.strftime('%d/%m/%Y %H:%M')
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao salvar arquivo: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return JsonResponse({
+            "success": False,
+            "error": f"Erro ao salvar arquivo: {str(e)}"
+        }, status=500)
+
+
+@login_required
+def delete_anexo(request, anexo_id):
+    """
+    Exclui um anexo
+    """
+    anexo = get_object_or_404(Attachment, id=anexo_id)
+    usuario = request.user
+    
+    # Verificar permissão (apenas quem enviou ou admin/gerente pode excluir)
+    if usuario.tipo not in ['admin', 'gerente'] and anexo.uploaded_by != usuario:
+        return JsonResponse({
+            "success": False, 
+            "error": "Você não tem permissão para excluir este anexo"
+        }, status=403)
+    
+    # Excluir o arquivo físico
+    try:
+        if anexo.arquivo and os.path.exists(anexo.arquivo.path):
+            os.remove(anexo.arquivo.path)
+            logger.info(f"🗑️ Arquivo excluído: {anexo.arquivo.path}")
+    except Exception as e:
+        logger.warning(f"⚠️ Não foi possível excluir o arquivo: {e}")
+    
+    task_id = anexo.task.id
+    anexo.delete()
+    
+    return JsonResponse({"success": True})
+
+
+@login_required
+def get_anexos(request, task_id):
+    """
+    Retorna todos os anexos de uma tarefa
+    """
+    task = get_object_or_404(Task, id=task_id)
+    usuario = request.user
+    
+    if not check_permission_user_board(usuario, task.board):
+        return JsonResponse({
+            "success": False, 
+            "error": "Sem permissão"
+        }, status=403)
+    
+    anexos = task.anexos.all()
+    
+    data = []
+    for anexo in anexos:
+        data.append({
+            "id": anexo.id,
+            "nome": anexo.nome,
+            "tamanho": anexo.get_tamanho_formatado(),
+            "tipo": anexo.tipo,
+            "icone": anexo.get_icone(),
+            "cor_icone": anexo.get_cor_icone(),
+            "url": anexo.arquivo.url,
+            "uploaded_by": anexo.uploaded_by.get_full_name() or anexo.uploaded_by.username,
+            "criado_em": anexo.criado_em.strftime('%d/%m/%Y %H:%M'),
+            "pode_excluir": usuario.tipo in ['admin', 'gerente'] or anexo.uploaded_by == usuario
+        })
+    
+    return JsonResponse({
+        "success": True,
+        "anexos": data
     })
 
 
@@ -1038,14 +1284,11 @@ def add_subtask(request, task_id):
 # =========================
 # SUBTASK (ATUALIZAR)
 # =========================
-# views.py - UPDATE SUBTASK (corrigido para gerente)
-
 @login_required
 def update_subtask(request, subtask_id):
     subtask = get_object_or_404(SubTask, id=subtask_id)
     usuario = request.user
     
-    # Verificar permissão - Agora o gerente pode editar qualquer subtarefa do setor
     if not check_permission_edit_subtask(usuario, subtask):
         messages.error(request, "Você não tem permissão para editar esta subtarefa.")
         return redirect("board", board_id=subtask.task.board.id)
@@ -1088,7 +1331,6 @@ def update_subtask(request, subtask_id):
     return redirect("board", board_id=subtask.task.board.id)
 
 
-
 # =========================
 # SUBTASK (TOGGLE - MARCAR/DESMARCAR)
 # =========================
@@ -1104,10 +1346,6 @@ def toggle_subtask(request, subtask_id):
     
     subtask.concluida = not subtask.concluida
     subtask.save()
-    
-    # 🔥 NOTIFICAR SE A SUBTAREFA FOI CONCLUÍDA
-    if subtask.concluida:
-        notificar_subtask_concluida(subtask.task, subtask)
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({
@@ -1184,16 +1422,13 @@ def get_notificacoes(request):
     """Retorna as notificações do usuário via AJAX"""
     usuario = request.user
     
-    # Buscar notificações não lidas
     notificacoes_nao_lidas = usuario.notificacoes.filter(lida=False)
     total_nao_lidas = notificacoes_nao_lidas.count()
     
-    # Buscar últimas 10 notificações
     ultimas_notificacoes = usuario.notificacoes.all()[:10]
     
     notificacoes_data = []
     for notif in ultimas_notificacoes:
-        # Determinar ícone baseado no tipo
         icone = {
             'comentario': 'fa-comment',
             'mencao': 'fa-at',
@@ -1202,7 +1437,6 @@ def get_notificacoes(request):
             'vencimento': 'fa-clock'
         }.get(notif.tipo, 'fa-bell')
         
-        # Determinar cor baseado no tipo
         cor = {
             'comentario': '#3b82f6',
             'mencao': '#8b5cf6',
@@ -1244,3 +1478,26 @@ def marcar_todas_notificacoes_lidas(request):
     """Marca todas as notificações como lidas"""
     request.user.notificacoes.filter(lida=False).update(lida=True)
     return JsonResponse({'success': True})
+
+
+# views.py - Adicione esta função com as outras funções de notificação
+
+def notificar_status_concluido(task, usuario):
+    """
+    Cria notificação no sistema quando uma tarefa é concluída
+    """
+    if not task.responsavel:
+        return
+    
+    if task.responsavel == usuario:
+        return
+    
+    nome_origem = usuario.get_full_name() or usuario.username
+    mensagem = f"{nome_origem} concluiu a tarefa: '{task.titulo}'"
+    criar_notificacao(
+        usuario=task.responsavel,
+        tipo='atribuicao',  # Ou crie um novo tipo 'concluido'
+        mensagem=mensagem,
+        origem=usuario,
+        task=task
+    )

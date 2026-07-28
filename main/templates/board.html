@@ -369,6 +369,9 @@
                                         </div>
 
                                         <div class="col-md-4 border-start">
+                                            <!-- =============================================
+                                                 COMENTÁRIOS
+                                            ============================================= -->
                                             <h6>Comentários</h6>
                                             <div class="comments-area" id="comments-{{ task.id }}" style="max-height: 400px; overflow-y: auto;">
                                                 {% for comment in task.comments.all %}
@@ -383,14 +386,44 @@
                                             <button type="button" class="btn btn-primary w-100 mt-2" onclick="addComment({{ task.id }})">
                                                 <i class="fas fa-comment"></i> Comentar
                                             </button>
+
+                                            <hr>
+
+                                            <!-- =============================================
+                                                 SEÇÃO DE ANEXOS COM VISUALIZAÇÃO
+                                            ============================================= -->
+                                            <h6>
+                                                <i class="fas fa-paperclip"></i> Anexos 
+                                                <span class="badge bg-secondary" id="anexos-count-{{ task.id }}">0</span>
+                                            </h6>
+                                            
+                                            <div class="anexos-area" id="anexos-container-{{ task.id }}" style="max-height: 250px; overflow-y: auto;">
+                                                <p class="text-muted small" id="no-anexos-{{ task.id }}">Nenhum anexo</p>
+                                            </div>
+                                            
+                                            <!-- Upload de anexo -->
+                                            <div class="mt-2">
+                                                <div class="d-flex gap-2" id="upload-container-{{ task.id }}">
+                                                    <input type="file" id="file-input-{{ task.id }}" class="form-control form-control-sm" 
+                                                           style="font-size: 12px;" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.gif,.zip,.rar">
+                                                    <button type="button" class="btn btn-sm btn-primary" onclick="uploadAnexo({{ task.id }})">
+                                                        <i class="fas fa-upload"></i>
+                                                    </button>
+                                                </div>
+                                                <small class="text-muted" style="font-size: 10px;">
+                                                    <i class="fas fa-info-circle"></i> Máx: 10MB. Formatos: PDF, DOC, XLS, PPT, imagens, ZIP
+                                                </small>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="modal-footer">
-                                    <button type="button" class="btn btn-danger" onclick="deleteTask({{ task.id }})">
-                                        <i class="fas fa-trash"></i> Excluir
-                                    </button>
+                                    {% if user.tipo == 'gerente' %}
+                                        <button type="button" class="btn btn-danger" onclick="deleteTask({{ task.id }})">
+                                            <i class="fas fa-trash"></i> Excluir
+                                        </button>
+                                    {% endif %}
                                     <button type="button" class="btn btn-success" onclick="saveTask({{ task.id }})">
                                         <i class="fas fa-save"></i> Salvar
                                     </button>
@@ -563,1027 +596,1444 @@
     </div>
 
     <!-- =====================================================
-         SCRIPTS
+         MODAL VISUALIZAR ANEXO
     ===================================================== -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/at.js/1.5.4/js/jquery.atwho.min.js"></script>
+    <div class="modal fade" id="visualizarAnexoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="visualizarAnexoTitulo">
+                        <i class="fas fa-eye"></i> Visualizando: <span id="anexoNomeVisualizacao"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="anexoConteudoVisualizacao" style="max-height: 70vh; overflow: auto; text-align: center; padding: 20px;">
+                    <div id="anexoLoading" class="text-center py-5">
+                        <i class="fas fa-spinner fa-spin fa-3x" style="color: #667eea;"></i>
+                        <p class="mt-3">Carregando arquivo...</p>
+                    </div>
+                    <div id="anexoConteudo" style="display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" id="anexoDownloadLink" class="btn btn-primary" download>
+                        <i class="fas fa-download"></i> Baixar
+                    </a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <script>
-    // ===============================
-    // VARIÁVEIS GLOBAIS
-    // ===============================
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
+<!-- =====================================================
+     SCRIPTS COMPLETOS DO BOARD.HTML (CORRIGIDO)
+     ===================================================== -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/at.js/1.5.4/js/jquery.atwho.min.js"></script>
+
+<script>
+// ===============================
+// VARIÁVEIS GLOBAIS
+// ===============================
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
             }
         }
-        return cookieValue;
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie("csrftoken");
+
+// ===============================
+// MENCIONAR USUÁRIOS (@)
+// ===============================
+
+function initMentionSystem() {
+    const usuarios = [
+        {% for usuario in usuarios_board %}
+        {
+            id: {{ usuario.id }},
+            name: "{{ usuario.get_full_name|default:usuario.username }}",
+            username: "{{ usuario.username }}",
+            email: "{{ usuario.email }}",
+            avatar: "{% if usuario.avatar %}{{ usuario.avatar.url }}{% else %}https://ui-avatars.com/api/?name={{ usuario.get_full_name|default:usuario.username }}&size=32&background=667eea&color=fff{% endif %}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
-    const csrftoken = getCookie("csrftoken");
-
-    // ===============================
-    // MENCIONAR USUÁRIOS (@)
-    // ===============================
-    
-    function initMentionSystem() {
-        const usuarios = [
-            {% for usuario in usuarios_board %}
-            {
-                id: {{ usuario.id }},
-                name: "{{ usuario.get_full_name|default:usuario.username }}",
-                username: "{{ usuario.username }}",
-                email: "{{ usuario.email }}",
-                avatar: "{% if usuario.avatar %}{{ usuario.avatar.url }}{% else %}https://ui-avatars.com/api/?name={{ usuario.get_full_name|default:usuario.username }}&size=32&background=667eea&color=fff{% endif %}"
-            }{% if not forloop.last %},{% endif %}
-            {% endfor %}
-        ];
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        $('.mention-textarea').each(function() {
-            const textarea = $(this);
-            
-            textarea.atwho({
-                at: '@',
-                data: usuarios,
-                displayTpl: function(data) {
-                    return `
-                        <li>
-                            <div class="d-flex align-items-center">
-                                <img src="${data.avatar}" alt="${data.name}" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 8px;">
-                                <div>
-                                    <strong>${escapeHtml(data.name)}</strong>
-                                    <br>
-                                    <small style="color: #6c757d;">@${escapeHtml(data.username)}</small>
-                                </div>
-                            </div>
-                        </li>
-                    `;
-                },
-                insertTpl: function(data) {
-                    return `@${data.username}`;
-                },
-                limit: 10,
-                startWithSpace: false,
-                suffix: ' ',
-                callbacks: {
-                    beforeInsert: function(value, $li) {
-                        return value;
-                    }
-                }
-            });
-        });
-    }
-
-    // ===============================
-    // PROCESSAR MENÇÕES NO TEXTO
-    // ===============================
-    function processarMencao(texto) {
-        const padrao = /@(\w+)/g;
-        return texto.replace(padrao, function(match, username) {
-            return `<span class="mention-tag"><i class="fas fa-at"></i> ${username}</span>`;
-        });
-    }
-
-    // ===============================
-    // CALCULAR PROGRESSO DA TAREFA
-    // ===============================
-    function calcularProgresso(taskId) {
-        const container = document.getElementById("subtasks-container-" + taskId);
-        if (!container) return;
-
-        const subtasks = container.querySelectorAll('.subtask-item');
-        const total = subtasks.length;
-
-        const cardProgress = document.getElementById("card-progress-" + taskId);
-        const cardProgressBar = document.getElementById("card-progress-bar-" + taskId);
-        const cardProgressPercent = document.getElementById("card-progress-percent-" + taskId);
+    $('.mention-textarea').each(function() {
+        const textarea = $(this);
         
-        const modalProgress = document.getElementById("modal-progress-" + taskId);
-        const modalProgressBar = document.getElementById("modal-progress-bar-" + taskId);
-        const modalProgressPercent = document.getElementById("modal-progress-percent-" + taskId);
-
-        const badge = document.querySelector(`.task-card[data-task-id="${taskId}"] .subtask-count-badge`);
-        if (badge) {
-            badge.innerHTML = `<i class="fas fa-tasks"></i> ${total}`;
-        }
-
-        if (total === 0) {
-            if (cardProgress) cardProgress.style.display = 'none';
-            if (modalProgress) {
-                modalProgress.innerHTML = '<p class="text-muted small">Nenhuma subtarefa criada</p>';
-            }
-            return;
-        }
-
-        if (cardProgress) cardProgress.style.display = 'block';
-
-        if (modalProgress) {
-            let progressDiv = modalProgress.querySelector('.task-progress');
-            if (!progressDiv) {
-                modalProgress.innerHTML = `
-                    <div class="task-progress">
-                        <div class="progress">
-                            <div class="progress-bar" id="modal-progress-bar-${taskId}" 
-                                 role="progressbar" 
-                                 style="width: 0%;"
-                                 aria-valuenow="0" 
-                                 aria-valuemin="0" 
-                                 aria-valuemax="100">
+        textarea.atwho({
+            at: '@',
+            data: usuarios,
+            displayTpl: function(data) {
+                return `
+                    <li>
+                        <div class="d-flex align-items-center">
+                            <img src="${data.avatar}" alt="${data.name}" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 8px;">
+                            <div>
+                                <strong>${escapeHtml(data.name)}</strong>
+                                <br>
+                                <small style="color: #6c757d;">@${escapeHtml(data.username)}</small>
                             </div>
                         </div>
-                        <div class="progress-label">
-                            <span>Progresso</span>
-                            <span class="percent" id="modal-progress-percent-${taskId}">0%</span>
+                    </li>
+                `;
+            },
+            insertTpl: function(data) {
+                return `@${data.username}`;
+            },
+            limit: 10,
+            startWithSpace: false,
+            suffix: ' ',
+            callbacks: {
+                beforeInsert: function(value, $li) {
+                    return value;
+                }
+            }
+        });
+    });
+}
+
+// ===============================
+// PROCESSAR MENÇÕES NO TEXTO
+// ===============================
+function processarMencao(texto) {
+    const padrao = /@(\w+)/g;
+    return texto.replace(padrao, function(match, username) {
+        return `<span class="mention-tag"><i class="fas fa-at"></i> ${username}</span>`;
+    });
+}
+
+// ===============================
+// CALCULAR PROGRESSO DA TAREFA
+// ===============================
+function calcularProgresso(taskId) {
+    const container = document.getElementById("subtasks-container-" + taskId);
+    if (!container) return;
+
+    const subtasks = container.querySelectorAll('.subtask-item');
+    const total = subtasks.length;
+
+    const cardProgress = document.getElementById("card-progress-" + taskId);
+    const cardProgressBar = document.getElementById("card-progress-bar-" + taskId);
+    const cardProgressPercent = document.getElementById("card-progress-percent-" + taskId);
+    
+    const modalProgress = document.getElementById("modal-progress-" + taskId);
+    const modalProgressBar = document.getElementById("modal-progress-bar-" + taskId);
+    const modalProgressPercent = document.getElementById("modal-progress-percent-" + taskId);
+
+    const badge = document.querySelector(`.task-card[data-task-id="${taskId}"] .subtask-count-badge`);
+    if (badge) {
+        badge.innerHTML = `<i class="fas fa-tasks"></i> ${total}`;
+    }
+
+    if (total === 0) {
+        if (cardProgress) cardProgress.style.display = 'none';
+        if (modalProgress) {
+            modalProgress.innerHTML = '<p class="text-muted small">Nenhuma subtarefa criada</p>';
+        }
+        return;
+    }
+
+    if (cardProgress) cardProgress.style.display = 'block';
+
+    if (modalProgress) {
+        let progressDiv = modalProgress.querySelector('.task-progress');
+        if (!progressDiv) {
+            modalProgress.innerHTML = `
+                <div class="task-progress">
+                    <div class="progress">
+                        <div class="progress-bar" id="modal-progress-bar-${taskId}" 
+                             role="progressbar" 
+                             style="width: 0%;"
+                             aria-valuenow="0" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
                         </div>
                     </div>
-                `;
-            }
-        }
-
-        let concluidas = 0;
-        subtasks.forEach(el => {
-            if (el.classList.contains('subtask-concluida')) concluidas++;
-        });
-
-        const percentual = Math.round((concluidas / total) * 100);
-        const isCompleted = percentual === 100;
-
-        if (cardProgressBar) {
-            cardProgressBar.style.width = percentual + '%';
-            cardProgressBar.setAttribute('aria-valuenow', percentual);
-            if (isCompleted) {
-                cardProgressBar.classList.add('completed');
-            } else {
-                cardProgressBar.classList.remove('completed');
-            }
-        }
-        if (cardProgressPercent) {
-            cardProgressPercent.textContent = percentual + '%';
-        }
-
-        const modalBar = document.getElementById("modal-progress-bar-" + taskId);
-        const modalPercent = document.getElementById("modal-progress-percent-" + taskId);
-        
-        if (modalBar) {
-            modalBar.style.width = percentual + '%';
-            modalBar.setAttribute('aria-valuenow', percentual);
-            if (isCompleted) {
-                modalBar.classList.add('completed');
-            } else {
-                modalBar.classList.remove('completed');
-            }
-        }
-        if (modalPercent) {
-            modalPercent.textContent = percentual + '%';
-        }
-
-        const countElement = document.getElementById("subtask-count-" + taskId);
-        if (countElement) {
-            countElement.textContent = total;
+                    <div class="progress-label">
+                        <span>Progresso</span>
+                        <span class="percent" id="modal-progress-percent-${taskId}">0%</span>
+                    </div>
+                </div>
+            `;
         }
     }
 
-    // ===============================
-    // TOGGLE SUBTASK
-    // ===============================
-    function toggleSubtask(subtaskId, taskId) {
-        fetch(`/subtask/${subtaskId}/toggle/`, {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": csrftoken,
-                "X-Requested-With": "XMLHttpRequest"
+    let concluidas = 0;
+    subtasks.forEach(el => {
+        if (el.classList.contains('subtask-concluida')) concluidas++;
+    });
+
+    const percentual = Math.round((concluidas / total) * 100);
+    const isCompleted = percentual === 100;
+
+    if (cardProgressBar) {
+        cardProgressBar.style.width = percentual + '%';
+        cardProgressBar.setAttribute('aria-valuenow', percentual);
+        if (isCompleted) {
+            cardProgressBar.classList.add('completed');
+        } else {
+            cardProgressBar.classList.remove('completed');
+        }
+    }
+    if (cardProgressPercent) {
+        cardProgressPercent.textContent = percentual + '%';
+    }
+
+    const modalBar = document.getElementById("modal-progress-bar-" + taskId);
+    const modalPercent = document.getElementById("modal-progress-percent-" + taskId);
+    
+    if (modalBar) {
+        modalBar.style.width = percentual + '%';
+        modalBar.setAttribute('aria-valuenow', percentual);
+        if (isCompleted) {
+            modalBar.classList.add('completed');
+        } else {
+            modalBar.classList.remove('completed');
+        }
+    }
+    if (modalPercent) {
+        modalPercent.textContent = percentual + '%';
+    }
+
+    const countElement = document.getElementById("subtask-count-" + taskId);
+    if (countElement) {
+        countElement.textContent = total;
+    }
+}
+
+// ===============================
+// TOGGLE SUBTASK
+// ===============================
+function toggleSubtask(subtaskId, taskId) {
+    fetch(`/subtask/${subtaskId}/toggle/`, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": csrftoken,
+            "X-Requested-With": "XMLHttpRequest"
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const element = document.getElementById("subtask-" + subtaskId);
+            if (element) {
+                if (data.concluida) {
+                    element.classList.add("subtask-concluida");
+                } else {
+                    element.classList.remove("subtask-concluida");
+                }
+                
+                const badge = element.querySelector('.badge');
+                if (badge) {
+                    badge.textContent = data.concluida ? 'Concluída' : 'Pendente';
+                    badge.className = `badge ${data.concluida ? 'bg-success' : 'bg-warning'}`;
+                }
+                
+                const button = element.querySelector('.btn-outline-success');
+                if (button) {
+                    button.innerHTML = data.concluida ? '<i class="fas fa-undo"></i>' : '<i class="fas fa-check"></i>';
+                }
+                
+                if (taskId) {
+                    calcularProgresso(taskId);
+                }
             }
+        } else {
+            alert(data.error || "Erro ao alternar subtarefa");
+        }
+    })
+    .catch(error => {
+        console.error("Erro:", error);
+        alert("Erro ao alternar subtarefa");
+    });
+}
+
+// ===============================
+// DRAG AND DROP
+// ===============================
+let draggedTaskId = null;
+let sourceColumnId = null;
+
+document.addEventListener('dragstart', function(e) {
+    const taskCard = e.target.closest('.task-card');
+    if (!taskCard) return;
+    
+    draggedTaskId = taskCard.dataset.taskId;
+    sourceColumnId = taskCard.closest('.kanban-column').dataset.status;
+    
+    taskCard.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', draggedTaskId);
+});
+
+document.addEventListener('dragend', function(e) {
+    const taskCard = e.target.closest('.task-card');
+    if (taskCard) {
+        taskCard.classList.remove('dragging');
+    }
+    document.querySelectorAll('.kanban-column.drag-over').forEach(col => {
+        col.classList.remove('drag-over');
+    });
+});
+
+document.querySelectorAll('.kanban-column').forEach(column => {
+    column.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        document.querySelectorAll('.kanban-column.drag-over').forEach(col => {
+            if (col !== this) col.classList.remove('drag-over');
+        });
+        this.classList.add('drag-over');
+    });
+
+    column.addEventListener('dragleave', function(e) {
+        if (!column.contains(e.relatedTarget)) {
+            this.classList.remove('drag-over');
+        }
+    });
+
+    column.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+        
+        const taskId = e.dataTransfer.getData('text/plain');
+        const targetStatusId = this.dataset.status;
+        
+        if (!taskId || !targetStatusId) return;
+        if (sourceColumnId === targetStatusId) return;
+        
+        const card = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+        
+        if (card) {
+            card.style.opacity = '0.5';
+            card.style.pointerEvents = 'none';
+        }
+        
+        const formData = new FormData();
+        formData.append('status', targetStatusId);
+        
+        fetch(`/task/${taskId}/update-status/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
-                const element = document.getElementById("subtask-" + subtaskId);
-                if (element) {
-                    if (data.concluida) {
-                        element.classList.add("subtask-concluida");
-                    } else {
-                        element.classList.remove("subtask-concluida");
-                    }
-                    
-                    const badge = element.querySelector('.badge');
-                    if (badge) {
-                        badge.textContent = data.concluida ? 'Concluída' : 'Pendente';
-                        badge.className = `badge ${data.concluida ? 'bg-success' : 'bg-warning'}`;
-                    }
-                    
-                    const button = element.querySelector('.btn-outline-success');
-                    if (button) {
-                        button.innerHTML = data.concluida ? '<i class="fas fa-undo"></i>' : '<i class="fas fa-check"></i>';
-                    }
-                    
-                    if (taskId) {
-                        calcularProgresso(taskId);
-                    }
-                }
+                window.location.reload();
             } else {
-                alert(data.error || "Erro ao alternar subtarefa");
-            }
-        })
-        .catch(error => {
-            console.error("Erro:", error);
-            alert("Erro ao alternar subtarefa");
-        });
-    }
-
-    // ===============================
-    // DRAG AND DROP
-    // ===============================
-    let draggedTaskId = null;
-    let sourceColumnId = null;
-
-    document.addEventListener('dragstart', function(e) {
-        const taskCard = e.target.closest('.task-card');
-        if (!taskCard) return;
-        
-        draggedTaskId = taskCard.dataset.taskId;
-        sourceColumnId = taskCard.closest('.kanban-column').dataset.status;
-        
-        taskCard.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', draggedTaskId);
-    });
-
-    document.addEventListener('dragend', function(e) {
-        const taskCard = e.target.closest('.task-card');
-        if (taskCard) {
-            taskCard.classList.remove('dragging');
-        }
-        document.querySelectorAll('.kanban-column.drag-over').forEach(col => {
-            col.classList.remove('drag-over');
-        });
-    });
-
-    document.querySelectorAll('.kanban-column').forEach(column => {
-        column.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            document.querySelectorAll('.kanban-column.drag-over').forEach(col => {
-                if (col !== this) col.classList.remove('drag-over');
-            });
-            this.classList.add('drag-over');
-        });
-
-        column.addEventListener('dragleave', function(e) {
-            if (!column.contains(e.relatedTarget)) {
-                this.classList.remove('drag-over');
-            }
-        });
-
-        column.addEventListener('drop', function(e) {
-            e.preventDefault();
-            this.classList.remove('drag-over');
-            
-            const taskId = e.dataTransfer.getData('text/plain');
-            const targetStatusId = this.dataset.status;
-            
-            if (!taskId || !targetStatusId) return;
-            if (sourceColumnId === targetStatusId) return;
-            
-            const card = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
-            
-            if (card) {
-                card.style.opacity = '0.5';
-                card.style.pointerEvents = 'none';
-            }
-            
-            const formData = new FormData();
-            formData.append('status', targetStatusId);
-            
-            fetch(`/task/${taskId}/update-status/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrftoken,
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    window.location.reload();
-                } else {
-                    if (card) {
-                        card.style.opacity = '1';
-                        card.style.pointerEvents = 'auto';
-                    }
-                    alert(data.error || 'Erro ao mover tarefa');
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
                 if (card) {
                     card.style.opacity = '1';
                     card.style.pointerEvents = 'auto';
                 }
-                alert('Erro ao mover tarefa. Tente novamente.');
-            });
+                alert(data.error || 'Erro ao mover tarefa');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            if (card) {
+                card.style.opacity = '1';
+                card.style.pointerEvents = 'auto';
+            }
+            alert('Erro ao mover tarefa. Tente novamente.');
         });
     });
+});
 
-    // ===============================
-    // FILTROS
-    // ===============================
-    function aplicarFiltros() {
-        const priority = document.getElementById('filterPriority').value;
-        const dueDate = document.getElementById('filterDueDate').value;
-        const responsavel = document.getElementById('filterResponsavel').value;
-        const subtasks = document.getElementById('filterSubtasks').value;
+// ===============================
+// FILTROS
+// ===============================
+function aplicarFiltros() {
+    const priority = document.getElementById('filterPriority').value;
+    const dueDate = document.getElementById('filterDueDate').value;
+    const responsavel = document.getElementById('filterResponsavel').value;
+    const subtasks = document.getElementById('filterSubtasks').value;
 
-        let visibleCount = 0;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayStr = today.toISOString().split('T')[0];
+    let visibleCount = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
 
-        document.querySelectorAll('.task-card').forEach(card => {
-            let show = true;
+    document.querySelectorAll('.task-card').forEach(card => {
+        let show = true;
 
-            if (priority !== 'all' && card.dataset.prioridade !== priority) {
+        if (priority !== 'all' && card.dataset.prioridade !== priority) {
+            show = false;
+        }
+
+        if (show && dueDate !== 'all') {
+            const dataEntrega = card.dataset.dataEntrega;
+            if (dueDate === 'no_date' && dataEntrega) {
+                show = false;
+            } else if (dueDate === 'overdue' && (!dataEntrega || dataEntrega >= todayStr)) {
+                show = false;
+            } else if (dueDate === 'today' && dataEntrega !== todayStr) {
+                show = false;
+            } else if (dueDate === 'this_week' && dataEntrega) {
+                const date = new Date(dataEntrega);
+                const diffDays = Math.ceil((date - today) / (1000 * 60 * 60 * 24));
+                if (diffDays < 0 || diffDays > 7) {
+                    show = false;
+                }
+            } else if (dueDate === 'no_date' && dataEntrega) {
                 show = false;
             }
-
-            if (show && dueDate !== 'all') {
-                const dataEntrega = card.dataset.dataEntrega;
-                if (dueDate === 'no_date' && dataEntrega) {
-                    show = false;
-                } else if (dueDate === 'overdue' && (!dataEntrega || dataEntrega >= todayStr)) {
-                    show = false;
-                } else if (dueDate === 'today' && dataEntrega !== todayStr) {
-                    show = false;
-                } else if (dueDate === 'this_week' && dataEntrega) {
-                    const date = new Date(dataEntrega);
-                    const diffDays = Math.ceil((date - today) / (1000 * 60 * 60 * 24));
-                    if (diffDays < 0 || diffDays > 7) {
-                        show = false;
-                    }
-                } else if (dueDate === 'no_date' && dataEntrega) {
-                    show = false;
-                }
-            }
-
-            if (show && responsavel !== 'all') {
-                if (responsavel === 'unassigned' && card.dataset.responsavel !== 'unassigned') {
-                    show = false;
-                } else if (responsavel !== 'unassigned' && card.dataset.responsavel !== responsavel) {
-                    show = false;
-                }
-            }
-
-            if (show && subtasks !== 'all') {
-                const badge = card.querySelector('.subtask-count-badge');
-                const total = badge ? parseInt(badge.textContent.trim()) : 0;
-                const taskId = card.dataset.taskId;
-                const container = document.getElementById("subtasks-container-" + taskId);
-                let concluidas = 0;
-                if (container) {
-                    container.querySelectorAll('.subtask-item.subtask-concluida').forEach(() => concluidas++);
-                }
-                
-                if (subtasks === 'has_subtasks' && total === 0) {
-                    show = false;
-                } else if (subtasks === 'no_subtasks' && total > 0) {
-                    show = false;
-                } else if (subtasks === 'completed' && (total === 0 || concluidas < total)) {
-                    show = false;
-                } else if (subtasks === 'incomplete' && (total === 0 || concluidas === total)) {
-                    show = false;
-                }
-            }
-
-            if (show) {
-                card.style.display = 'block';
-                visibleCount++;
-            } else {
-                card.style.display = 'none';
-            }
-        });
-
-        document.getElementById('visibleCount').textContent = visibleCount;
-
-        document.querySelectorAll('.kanban-column').forEach(column => {
-            const statusId = column.dataset.status;
-            const visibleCards = column.querySelectorAll('.task-card[style*="display: block"]');
-            const count = visibleCards.length;
-            const countElement = document.getElementById('count-' + statusId);
-            if (countElement) {
-                countElement.textContent = count;
-            }
-
-            const tasksContainer = column.querySelector('.tasks');
-            let emptyMessage = tasksContainer.querySelector('.empty-state-filtered');
-            if (count === 0) {
-                if (!emptyMessage) {
-                    emptyMessage = document.createElement('div');
-                    emptyMessage.className = 'empty-state empty-state-filtered';
-                    emptyMessage.innerHTML = `
-                        <i class="fas fa-filter"></i>
-                        <p>Nenhuma tarefa corresponde aos filtros</p>
-                    `;
-                    tasksContainer.appendChild(emptyMessage);
-                }
-            } else if (emptyMessage) {
-                emptyMessage.remove();
-            }
-        });
-    }
-
-    function clearFilters() {
-        document.getElementById('filterPriority').value = 'all';
-        document.getElementById('filterDueDate').value = 'all';
-        document.getElementById('filterResponsavel').value = 'all';
-        document.getElementById('filterSubtasks').value = 'all';
-        aplicarFiltros();
-    }
-
-    // ===============================
-    // MODAIS
-    // ===============================
-    function openTaskModal(taskId) {
-        const modal = new bootstrap.Modal(document.getElementById('taskModal' + taskId));
-        modal.show();
-        
-        setTimeout(() => {
-            initMentionSystem();
-        }, 300);
-    }
-
-    function saveTask(taskId) {
-        const form = document.getElementById("taskForm" + taskId);
-        if (!form) {
-            console.error("Form não encontrado para task:", taskId);
-            return;
         }
-        
-        const formData = new FormData(form);
-        
-        fetch(form.dataset.url, {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": csrftoken
-            },
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert(data.error || "Erro ao salvar tarefa");
+
+        if (show && responsavel !== 'all') {
+            if (responsavel === 'unassigned' && card.dataset.responsavel !== 'unassigned') {
+                show = false;
+            } else if (responsavel !== 'unassigned' && card.dataset.responsavel !== responsavel) {
+                show = false;
             }
-        })
-        .catch(error => {
-            console.error("Erro:", error);
-            alert("Erro ao salvar tarefa");
-        });
-    }
-
-    function deleteTask(id) {
-        if (!confirm("Deseja excluir esta tarefa?")) return;
-        window.location.href = `/task/${id}/delete/`;
-    }
-
-    // ===============================
-    // COMENTÁRIOS
-    // ===============================
-    function addComment(taskId) {
-        const input = document.getElementById("comment-input-" + taskId);
-        const texto = input.value.trim();
-
-        if (!texto) return;
-
-        const dados = new FormData();
-        dados.append("comment", texto);
-
-        fetch(`/task/${taskId}/comment/`, {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": csrftoken
-            },
-            body: dados
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const area = document.getElementById("comments-" + taskId);
-                const div = document.createElement("div");
-                div.className = "comment-box";
-                
-                const textoProcessado = processarMencao(data.texto);
-                
-                div.innerHTML = `
-                    <strong>${data.username}</strong>
-                    <p>${textoProcessado}</p>
-                    <small>agora</small>
-                `;
-                area.appendChild(div);
-                input.value = "";
-            }
-        });
-    }
-
-    // ===============================
-    // SUBTAREFAS
-    // ===============================
-    function openSubtaskModal(taskId) {
-        document.getElementById("subtask-title-" + taskId).value = "";
-        document.getElementById("subtask-prioridade-" + taskId).value = "media";
-        document.getElementById("subtask-responsavel-" + taskId).value = "";
-        document.getElementById("subtask-data-entrega-" + taskId).value = "";
-        
-        const modal = new bootstrap.Modal(document.getElementById("subtaskModal" + taskId));
-        modal.show();
-    }
-
-    function saveSubtask(taskId) {
-        const titulo = document.getElementById("subtask-title-" + taskId).value.trim();
-        if (!titulo) {
-            alert("Digite um título para a subtarefa");
-            return;
         }
-        
-        const formData = new FormData();
-        formData.append("titulo", titulo);
-        formData.append("prioridade", document.getElementById("subtask-prioridade-" + taskId).value);
-        formData.append("responsavel", document.getElementById("subtask-responsavel-" + taskId).value);
-        formData.append("data_entrega", document.getElementById("subtask-data-entrega-" + taskId).value);
-        
-        fetch(`/task/${taskId}/add-subtask/`, {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": csrftoken,
-                "X-Requested-With": "XMLHttpRequest"
-            },
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const modal = bootstrap.Modal.getInstance(document.getElementById("subtaskModal" + taskId));
-                modal.hide();
-                
-                adicionarSubtaskNaLista(taskId, data.subtask);
-                calcularProgresso(taskId);
-            } else {
-                alert(data.error || "Erro ao criar subtarefa");
-            }
-        })
-        .catch(error => {
-            console.error("Erro:", error);
-            alert("Erro ao criar subtarefa");
-        });
-    }
 
-    function adicionarSubtaskNaLista(taskId, subtask) {
-        const container = document.getElementById("subtasks-container-" + taskId);
-        
-        const noSubtasks = document.getElementById("no-subtasks-" + taskId);
-        if (noSubtasks) {
-            noSubtasks.remove();
-        }
-        
-        const div = document.createElement("div");
-        div.className = "border rounded p-2 mb-2 d-flex justify-content-between align-items-center subtask-item";
-        div.id = "subtask-" + subtask.id;
-        div.setAttribute("data-subtask-id", subtask.id);
-        
-        div.innerHTML = `
-            <div>
-                <strong>${subtask.titulo}</strong>
-                <br>
-                <small class="text-muted">
-                    <span class="badge ${subtask.concluida ? 'bg-success' : 'bg-warning'}">${subtask.concluida ? 'Concluída' : 'Pendente'}</span>
-                    Prioridade: ${subtask.prioridade_display}
-                    ${subtask.responsavel ? `| 👤 ${subtask.responsavel}` : ''}
-                    ${subtask.data_entrega ? `| 📅 ${subtask.data_entrega}` : ''}
-                </small>
-            </div>
-            <div>
-                <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="event.stopPropagation(); toggleSubtask(${subtask.id}, ${taskId})">
-                    ${subtask.concluida ? '<i class="fas fa-undo"></i>' : '<i class="fas fa-check"></i>'}
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); openEditSubtaskModal(${subtask.id})">
-                    <i class="fas fa-edit"></i>
-                </button>
-            </div>
-        `;
-        
-        container.appendChild(div);
-    }
-
-    function openEditSubtaskModal(subtaskId) {
-        const subtaskElement = document.getElementById("subtask-" + subtaskId);
-        if (!subtaskElement) return;
-        
-        const taskElement = subtaskElement.closest('.modal');
-        const taskId = taskElement ? taskElement.id.replace("taskModal", "") : null;
-        if (!taskId) return;
-        
-        const titulo = subtaskElement.querySelector('strong').textContent;
-        const prioridadeText = subtaskElement.querySelector('.text-muted').textContent;
-        let prioridade = "media";
-        if (prioridadeText.includes("Baixa")) prioridade = "baixa";
-        else if (prioridadeText.includes("Alta")) prioridade = "alta";
-        else if (prioridadeText.includes("Urgente")) prioridade = "urgente";
-        
-        const isConcluida = subtaskElement.querySelector('.badge.bg-success') !== null;
-        
-        document.getElementById("edit-subtask-title-" + taskId).value = titulo;
-        document.getElementById("edit-subtask-prioridade-" + taskId).value = prioridade;
-        document.getElementById("edit-subtask-concluida-" + taskId).value = isConcluida ? "True" : "False";
-        
-        fetch(`/task/${taskId}/subtasks/`, {
-            headers: {
-                "X-Requested-With": "XMLHttpRequest"
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const subtaskData = data.subtasks.find(s => s.id === subtaskId);
-                if (subtaskData) {
-                    document.getElementById("edit-subtask-responsavel-" + taskId).value = subtaskData.responsavel_id || "";
-                    document.getElementById("edit-subtask-data-entrega-" + taskId).value = subtaskData.data_entrega || "";
-                }
-            }
-        })
-        .catch(error => console.error("Erro:", error));
-        
-        const taskModal = bootstrap.Modal.getInstance(document.getElementById("taskModal" + taskId));
-        if (taskModal) taskModal.hide();
-        
-        const modal = new bootstrap.Modal(document.getElementById("editSubTaskModal" + taskId));
-        modal.show();
-        document.getElementById("editSubTaskModal" + taskId).setAttribute("data-editing-subtask", subtaskId);
-    }
-
-    function updateSubtask(taskId) {
-        const subtaskId = document.getElementById("editSubTaskModal" + taskId).getAttribute("data-editing-subtask");
-        if (!subtaskId) {
-            alert("Erro: subtask não identificada");
-            return;
-        }
-        
-        const titulo = document.getElementById("edit-subtask-title-" + taskId).value.trim();
-        if (!titulo) {
-            alert("Digite um título para a subtarefa");
-            return;
-        }
-        
-        const formData = new FormData();
-        formData.append("titulo", titulo);
-        formData.append("prioridade", document.getElementById("edit-subtask-prioridade-" + taskId).value);
-        formData.append("concluida", document.getElementById("edit-subtask-concluida-" + taskId).value);
-        formData.append("responsavel", document.getElementById("edit-subtask-responsavel-" + taskId).value);
-        formData.append("data_entrega", document.getElementById("edit-subtask-data-entrega-" + taskId).value);
-        
-        fetch(`/subtask/${subtaskId}/update/`, {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": csrftoken,
-                "X-Requested-With": "XMLHttpRequest"
-            },
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const modal = bootstrap.Modal.getInstance(document.getElementById("editSubTaskModal" + taskId));
-                modal.hide();
-                
-                atualizarSubtaskNaLista(taskId, data.subtask);
-                calcularProgresso(taskId);
-                
-                setTimeout(() => {
-                    const taskModal = new bootstrap.Modal(document.getElementById("taskModal" + taskId));
-                    taskModal.show();
-                }, 300);
-            } else {
-                alert(data.error || "Erro ao atualizar subtarefa");
-            }
-        })
-        .catch(error => {
-            console.error("Erro:", error);
-            alert("Erro ao atualizar subtarefa");
-        });
-    }
-
-    function atualizarSubtaskNaLista(taskId, subtask) {
-        const element = document.getElementById("subtask-" + subtask.id);
-        if (!element) return;
-        
-        element.innerHTML = `
-            <div>
-                <strong>${subtask.titulo}</strong>
-                <br>
-                <small class="text-muted">
-                    <span class="badge ${subtask.concluida ? 'bg-success' : 'bg-warning'}">${subtask.concluida ? 'Concluída' : 'Pendente'}</span>
-                    Prioridade: ${subtask.prioridade_display}
-                    ${subtask.responsavel ? `| 👤 ${subtask.responsavel}` : ''}
-                    ${subtask.data_entrega ? `| 📅 ${subtask.data_entrega}` : ''}
-                </small>
-            </div>
-            <div>
-                <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="event.stopPropagation(); toggleSubtask(${subtask.id}, ${taskId})">
-                    ${subtask.concluida ? '<i class="fas fa-undo"></i>' : '<i class="fas fa-check"></i>'}
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); openEditSubtaskModal(${subtask.id})">
-                    <i class="fas fa-edit"></i>
-                </button>
-            </div>
-        `;
-        
-        if (subtask.concluida) {
-            element.classList.add("subtask-concluida");
-        } else {
-            element.classList.remove("subtask-concluida");
-        }
-    }
-
-    function deleteSubtask(taskId) {
-        const subtaskId = document.getElementById("editSubTaskModal" + taskId).getAttribute("data-editing-subtask");
-        if (!subtaskId) {
-            alert("Erro: subtask não identificada");
-            return;
-        }
-        
-        if (!confirm("Excluir esta subtarefa?")) return;
-        
-        fetch(`/subtask/${subtaskId}/delete/`, {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": csrftoken
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                const modal = bootstrap.Modal.getInstance(document.getElementById("editSubTaskModal" + taskId));
-                modal.hide();
-                
-                const element = document.getElementById("subtask-" + subtaskId);
-                if (element) element.remove();
-                
-                const container = document.getElementById("subtasks-container-" + taskId);
-                if (container.children.length === 0) {
-                    const p = document.createElement("p");
-                    p.className = "text-muted";
-                    p.id = "no-subtasks-" + taskId;
-                    p.textContent = "Nenhuma subtarefa";
-                    container.appendChild(p);
-                }
-                
-                calcularProgresso(taskId);
-                
-                setTimeout(() => {
-                    const taskModal = new bootstrap.Modal(document.getElementById("taskModal" + taskId));
-                    taskModal.show();
-                }, 300);
-            }
-        })
-        .catch(error => {
-            console.error("Erro:", error);
-            alert("Erro ao excluir subtarefa");
-        });
-    }
-
-    // ===============================
-    // NOTIFICAÇÕES
-    // ===============================
-
-    function carregarNotificacoes() {
-        const container = document.getElementById('conteudo-notificacoes');
-        if (!container) return;
-        
-        fetch('/notificacoes/', {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            const contador = document.getElementById('contador-notificacoes');
-            
-            if (data.total_nao_lidas > 0) {
-                contador.textContent = data.total_nao_lidas;
-                contador.style.display = 'inline';
-            } else {
-                contador.style.display = 'none';
-            }
-            
-            if (data.notificacoes.length === 0) {
-                container.innerHTML = `
-                    <li class="dropdown-item text-center text-muted py-4">
-                        <i class="fas fa-bell-slash" style="font-size: 32px; display: block; margin-bottom: 8px;"></i>
-                        Nenhuma notificação
-                    </li>
-                `;
-            } else {
-                let html = '';
-                data.notificacoes.forEach(notif => {
-                    const bgColor = notif.lida ? '' : 'background-color: #f0f4ff;';
-                    const borderColor = notif.lida ? '' : 'border-left: 3px solid #667eea;';
-                    
-                    html += `
-                        <li class="dropdown-item" style="${bgColor} ${borderColor} padding: 12px 16px; cursor: pointer;" 
-                            onclick="abrirNotificacao(${notif.id}, '${notif.tipo}', ${notif.task_id || 'null'})">
-                            <div class="d-flex align-items-start">
-                                <div class="flex-shrink-0" style="margin-right: 12px;">
-                                    <div style="width: 36px; height: 36px; border-radius: 50%; background: ${notif.cor}20; display: flex; align-items: center; justify-content: center; color: ${notif.cor};">
-                                        <i class="fas ${notif.icone}"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <div style="font-size: 13px; color: #1a1a2e; line-height: 1.4;">${notif.mensagem}</div>
-                                    <small class="text-muted" style="font-size: 11px;">
-                                        <i class="far fa-clock"></i> ${notif.criado_em}
-                                        ${!notif.lida ? '<span class="badge bg-primary ms-2" style="font-size: 9px;">Nova</span>' : ''}
-                                    </small>
-                                </div>
-                            </div>
-                        </li>
-                    `;
-                });
-                container.innerHTML = html;
-            }
-        })
-        .catch(error => {
-            console.error('Erro ao carregar notificações:', error);
-            container.innerHTML = `
-                <li class="dropdown-item text-center text-danger py-3">
-                    <i class="fas fa-exclamation-circle"></i> Erro ao carregar notificações
-                </li>
-            `;
-        });
-    }
-
-    function abrirNotificacao(notificacaoId, tipo, taskId) {
-        // Marcar como lida
-        fetch(`/notificacao/${notificacaoId}/marcar-lida/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-        
-        if (taskId) {
-            const dropdown = bootstrap.Dropdown.getInstance(document.getElementById('sino-notificacoes'));
-            if (dropdown) dropdown.hide();
-            
-            // Abrir o modal da tarefa
-            openTaskModal(taskId);
-        }
-    }
-
-    function marcarTodasLidas() {
-        if (!confirm('Marcar todas as notificações como lidas?')) return;
-        
-        fetch('/notificacoes/marcar-todas-lidas/', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                document.getElementById('contador-notificacoes').style.display = 'none';
-                carregarNotificacoes();
-            }
-        });
-    }
-
-    // ===============================
-    // EVENTOS DE INICIALIZAÇÃO
-    // ===============================
-    document.addEventListener('DOMContentLoaded', function() {
-        // Inicializar sistema de menções
-        initMentionSystem();
-        
-        // Calcular progresso das tarefas
-        document.querySelectorAll('.task-card').forEach(card => {
+        if (show && subtasks !== 'all') {
+            const badge = card.querySelector('.subtask-count-badge');
+            const total = badge ? parseInt(badge.textContent.trim()) : 0;
             const taskId = card.dataset.taskId;
-            setTimeout(() => calcularProgresso(taskId), 200);
-        });
-
-        // Aplicar filtros
-        aplicarFiltros();
-
-        // Event listeners dos filtros
-        document.querySelectorAll('#filterPriority, #filterDueDate, #filterResponsavel, #filterSubtasks').forEach(el => {
-            el.addEventListener('change', aplicarFiltros);
-        });
-
-        // Verificar selects de responsável
-        document.querySelectorAll('select[name="responsavel"]').forEach(select => {
-            const options = select.querySelectorAll('option');
-            let hasOptions = false;
-            for (let i = 0; i < options.length; i++) {
-                if (options[i].value && options[i].value !== '') {
-                    hasOptions = true;
-                    break;
-                }
+            const container = document.getElementById("subtasks-container-" + taskId);
+            let concluidas = 0;
+            if (container) {
+                container.querySelectorAll('.subtask-item.subtask-concluida').forEach(() => concluidas++);
             }
-            if (!hasOptions) {
-                const option = document.createElement('option');
-                option.value = '';
-                option.textContent = 'Nenhum membro disponível neste setor';
-                option.disabled = true;
-                option.selected = true;
-                select.appendChild(option);
-            }
-        });
-
-        // Carregar notificações
-        const sino = document.getElementById('sino-notificacoes');
-        if (sino) {
-            sino.addEventListener('click', function() {
-                carregarNotificacoes();
-            });
-        }
-        
-        // 🔥 ABRIR TAREFA AUTOMATICAMENTE (DA HOME)
-        const openTaskId = '{{ open_task_id|default:"" }}';
-        if (openTaskId) {
-            console.log('📌 Abrindo tarefa automaticamente:', openTaskId);
             
-            setTimeout(function() {
-                if (typeof openTaskModal === 'function') {
-                    openTaskModal(parseInt(openTaskId));
-                    
-                    // Remover o parâmetro da URL para não reabrir ao recarregar
-                    const url = new URL(window.location.href);
-                    url.searchParams.delete('open_task');
-                    window.history.replaceState({}, document.title, url.toString());
-                } else {
-                    console.warn('openTaskModal não encontrado');
-                }
-            }, 800);
+            if (subtasks === 'has_subtasks' && total === 0) {
+                show = false;
+            } else if (subtasks === 'no_subtasks' && total > 0) {
+                show = false;
+            } else if (subtasks === 'completed' && (total === 0 || concluidas < total)) {
+                show = false;
+            } else if (subtasks === 'incomplete' && (total === 0 || concluidas === total)) {
+                show = false;
+            }
         }
-        
-        setTimeout(carregarNotificacoes, 500);
+
+        if (show) {
+            card.style.display = 'block';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
     });
 
-    // ===============================
-    // EVENTOS DOS MODAIS
-    // ===============================
-    document.addEventListener('hidden.bs.modal', function(event) {
-        const modalId = event.target.id;
+    document.getElementById('visibleCount').textContent = visibleCount;
+
+    document.querySelectorAll('.kanban-column').forEach(column => {
+        const statusId = column.dataset.status;
+        const visibleCards = column.querySelectorAll('.task-card[style*="display: block"]');
+        const count = visibleCards.length;
+        const countElement = document.getElementById('count-' + statusId);
+        if (countElement) {
+            countElement.textContent = count;
+        }
+
+        const tasksContainer = column.querySelector('.tasks');
+        let emptyMessage = tasksContainer.querySelector('.empty-state-filtered');
+        if (count === 0) {
+            if (!emptyMessage) {
+                emptyMessage = document.createElement('div');
+                emptyMessage.className = 'empty-state empty-state-filtered';
+                emptyMessage.innerHTML = `
+                    <i class="fas fa-filter"></i>
+                    <p>Nenhuma tarefa corresponde aos filtros</p>
+                `;
+                tasksContainer.appendChild(emptyMessage);
+            }
+        } else if (emptyMessage) {
+            emptyMessage.remove();
+        }
+    });
+}
+
+function clearFilters() {
+    document.getElementById('filterPriority').value = 'all';
+    document.getElementById('filterDueDate').value = 'all';
+    document.getElementById('filterResponsavel').value = 'all';
+    document.getElementById('filterSubtasks').value = 'all';
+    aplicarFiltros();
+}
+
+// ===============================
+// MODAIS
+// ===============================
+function openTaskModal(taskId) {
+    const modal = new bootstrap.Modal(document.getElementById('taskModal' + taskId));
+    modal.show();
+    
+    setTimeout(() => {
+        carregarAnexos(taskId);
+    }, 300);
+    
+    setTimeout(() => {
+        initMentionSystem();
+    }, 500);
+}
+
+function saveTask(taskId) {
+    const form = document.getElementById("taskForm" + taskId);
+    if (!form) {
+        console.error("Form não encontrado para task:", taskId);
+        return;
+    }
+    
+    const formData = new FormData(form);
+    
+    fetch(form.dataset.url, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": csrftoken
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || "Erro ao salvar tarefa");
+        }
+    })
+    .catch(error => {
+        console.error("Erro:", error);
+        alert("Erro ao salvar tarefa");
+    });
+}
+
+function deleteTask(id) {
+    if (!confirm("Deseja excluir esta tarefa?")) return;
+    window.location.href = `/task/${id}/delete/`;
+}
+
+// ===============================
+// COMENTÁRIOS
+// ===============================
+function addComment(taskId) {
+    const input = document.getElementById("comment-input-" + taskId);
+    const texto = input.value.trim();
+
+    if (!texto) return;
+
+    const dados = new FormData();
+    dados.append("comment", texto);
+
+    fetch(`/task/${taskId}/comment/`, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": csrftoken
+        },
+        body: dados
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const area = document.getElementById("comments-" + taskId);
+            const div = document.createElement("div");
+            div.className = "comment-box";
+            
+            const textoProcessado = processarMencao(data.texto);
+            
+            div.innerHTML = `
+                <strong>${data.username}</strong>
+                <p>${textoProcessado}</p>
+                <small>agora</small>
+            `;
+            area.appendChild(div);
+            input.value = "";
+        }
+    });
+}
+
+// ===============================
+// ANEXOS COM VISUALIZAÇÃO (CORRIGIDO)
+// ===============================
+
+function carregarAnexos(taskId) {
+    const container = document.getElementById('anexos-container-' + taskId);
+    if (!container) return;
+    
+    fetch(`/task/${taskId}/anexos/`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const countElement = document.getElementById('anexos-count-' + taskId);
         
-        if (modalId && modalId.startsWith('subtaskModal')) {
-            const taskId = modalId.replace('subtaskModal', '');
+        if (data.success && data.anexos.length > 0) {
+            let html = '';
+            data.anexos.forEach(anexo => {
+                const podeExcluir = anexo.pode_excluir ? 
+                    `<button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); excluirAnexo(${anexo.id}, ${taskId})">
+                        <i class="fas fa-trash"></i>
+                     </button>` : '';
+                
+                // 🔥 VERIFICAR SE PODE VISUALIZAR
+                const tipoVisualizavel = anexo.tipo ? anexo.tipo.toLowerCase() : '';
+                const podeVisualizar = 
+                    tipoVisualizavel.startsWith('image/') ||
+                    tipoVisualizavel === 'application/pdf' ||
+                    tipoVisualizavel.startsWith('text/') ||
+                    tipoVisualizavel.includes('word') ||
+                    tipoVisualizavel.includes('document') ||
+                    tipoVisualizavel.includes('sheet') ||
+                    tipoVisualizavel.includes('excel') ||
+                    tipoVisualizavel.includes('presentation') ||
+                    tipoVisualizavel.includes('powerpoint') ||
+                    anexo.nome.toLowerCase().endsWith('.docx') ||
+                    anexo.nome.toLowerCase().endsWith('.doc') ||
+                    anexo.nome.toLowerCase().endsWith('.xlsx') ||
+                    anexo.nome.toLowerCase().endsWith('.xls') ||
+                    anexo.nome.toLowerCase().endsWith('.pptx') ||
+                    anexo.nome.toLowerCase().endsWith('.ppt');
+                
+                const botaoVisualizar = podeVisualizar ? 
+                    `<button class="btn btn-sm btn-outline-info" onclick="event.stopPropagation(); visualizarAnexo('${anexo.url}', '${anexo.nome}', '${anexo.tipo}')">
+                        <i class="fas fa-eye"></i>
+                     </button>` : '';
+                
+                html += `
+                    <div class="anexo-item" id="anexo-${anexo.id}">
+                        <div class="anexo-icon" style="background: ${anexo.cor_icone}20; color: ${anexo.cor_icone};">
+                            <i class="fas ${anexo.icone}"></i>
+                        </div>
+                        <div class="anexo-info">
+                            <span class="anexo-nome" title="${anexo.nome}">${anexo.nome}</span>
+                            <span class="anexo-meta">
+                                ${anexo.tamanho} • ${anexo.uploaded_by} • ${anexo.criado_em}
+                            </span>
+                        </div>
+                        <div class="anexo-actions">
+                            ${botaoVisualizar}
+                            <a href="${anexo.url}" target="_blank" class="btn btn-sm btn-outline-primary" download onclick="event.stopPropagation();">
+                                <i class="fas fa-download"></i>
+                            </a>
+                            ${podeExcluir}
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+            
+            if (countElement) {
+                countElement.textContent = data.anexos.length;
+            }
+            
+            const noAnexos = document.getElementById('no-anexos-' + taskId);
+            if (noAnexos) noAnexos.style.display = 'none';
+        } else {
+            container.innerHTML = `<p class="text-muted small" id="no-anexos-${taskId}">Nenhum anexo</p>`;
+            if (countElement) {
+                countElement.textContent = '0';
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao carregar anexos:', error);
+    });
+}
+
+// ===============================
+// VISUALIZAR ANEXO (VERSÃO FINAL CORRIGIDA)
+// ===============================
+function visualizarAnexo(url, nome, tipo) {
+    console.log('👁️ Visualizando:', nome, 'URL:', url, 'Tipo:', tipo);
+    
+    // Prevenir propagação do evento
+    if (event) {
+        event.stopPropagation();
+    }
+    
+    // 🔥 FECHAR O MODAL DA TAREFA
+    const taskModal = document.querySelector('.modal.show');
+    if (taskModal) {
+        const modalInstance = bootstrap.Modal.getInstance(taskModal);
+        if (modalInstance) {
+            modalInstance.hide();
+        }
+    }
+    
+    // 🔥 ESPERAR O MODAL FECHAR E ABRIR O DE VISUALIZAÇÃO
+    setTimeout(() => {
+        const modalElement = document.getElementById('visualizarAnexoModal');
+        const modal = new bootstrap.Modal(modalElement, {
+            backdrop: 'static',
+            keyboard: true
+        });
+        
+        const titulo = document.getElementById('anexoNomeVisualizacao');
+        const conteudo = document.getElementById('anexoConteudo');
+        const loading = document.getElementById('anexoLoading');
+        const downloadLink = document.getElementById('anexoDownloadLink');
+        
+        // Resetar o conteúdo
+        titulo.textContent = nome;
+        downloadLink.href = url;
+        downloadLink.download = nome;
+        
+        // Mostrar loading
+        loading.style.display = 'block';
+        loading.innerHTML = `
+            <i class="fas fa-spinner fa-spin fa-3x" style="color: #667eea;"></i>
+            <p class="mt-3">Carregando arquivo...</p>
+        `;
+        conteudo.style.display = 'none';
+        conteudo.innerHTML = '';
+        
+        // 🔥 ABRIR O MODAL
+        modal.show();
+        
+        const tipoLower = tipo ? tipo.toLowerCase() : '';
+        const nomeLower = nome.toLowerCase();
+        
+        // 🔥 VERIFICAR TIPO DO ARQUIVO
+        if (tipoLower && tipoLower.startsWith('image/')) {
+            // Imagem
+            const img = document.createElement('img');
+            img.src = url;
+            img.className = 'img-fluid';
+            img.style.maxHeight = '70vh';
+            img.style.maxWidth = '100%';
+            img.style.objectFit = 'contain';
+            img.onload = function() {
+                loading.style.display = 'none';
+                conteudo.style.display = 'block';
+                conteudo.appendChild(img);
+            };
+            img.onerror = function() {
+                loading.innerHTML = `
+                    <i class="fas fa-exclamation-circle fa-3x" style="color: #ef4444;"></i>
+                    <p class="mt-3">Não foi possível carregar a imagem.</p>
+                    <a href="${url}" target="_blank" class="btn btn-primary">Abrir em nova aba</a>
+                `;
+            };
+        } else if (tipoLower === 'application/pdf' || nomeLower.endsWith('.pdf')) {
+            // PDF - usar iframe com visualização nativa do navegador
+            const iframe = document.createElement('iframe');
+            iframe.src = url;
+            iframe.style.width = '100%';
+            iframe.style.height = '70vh';
+            iframe.style.border = 'none';
+            iframe.style.background = '#f8f9fa';
+            
+            loading.style.display = 'none';
+            conteudo.style.display = 'block';
+            conteudo.appendChild(iframe);
+        } else if (tipoLower && tipoLower.startsWith('text/') || nomeLower.endsWith('.txt') || nomeLower.endsWith('.csv')) {
+            // Arquivo de texto
+            fetch(url)
+                .then(response => response.text())
+                .then(text => {
+                    const pre = document.createElement('pre');
+                    pre.textContent = text;
+                    pre.style.textAlign = 'left';
+                    pre.style.maxHeight = '60vh';
+                    pre.style.overflow = 'auto';
+                    pre.style.padding = '15px';
+                    pre.style.background = '#f8f9fa';
+                    pre.style.borderRadius = '8px';
+                    pre.style.fontSize = '14px';
+                    pre.style.whiteSpace = 'pre-wrap';
+                    pre.style.wordBreak = 'break-word';
+                    
+                    loading.style.display = 'none';
+                    conteudo.style.display = 'block';
+                    conteudo.appendChild(pre);
+                })
+                .catch(() => {
+                    loading.innerHTML = `
+                        <i class="fas fa-exclamation-circle fa-3x" style="color: #ef4444;"></i>
+                        <p class="mt-3">Não foi possível carregar o arquivo.</p>
+                        <a href="${url}" target="_blank" class="btn btn-primary">Abrir em nova aba</a>
+                    `;
+                });
+        } else if (
+            nomeLower.endsWith('.docx') || nomeLower.endsWith('.doc') ||
+            nomeLower.endsWith('.xlsx') || nomeLower.endsWith('.xls') ||
+            nomeLower.endsWith('.pptx') || nomeLower.endsWith('.ppt')
+        ) {
+            // 🔥 ARQUIVOS DO OFFICE - Usar Google Docs Viewer
+            const viewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(window.location.origin + url)}&embedded=true`;
+            
+            const iframe = document.createElement('iframe');
+            iframe.src = viewerUrl;
+            iframe.style.width = '100%';
+            iframe.style.height = '70vh';
+            iframe.style.border = 'none';
+            iframe.style.background = '#f8f9fa';
+            
+            loading.style.display = 'none';
+            conteudo.style.display = 'block';
+            conteudo.appendChild(iframe);
+            
+            // Adicionar aviso
+            const aviso = document.createElement('p');
+            aviso.className = 'text-muted mt-2 small';
+            aviso.innerHTML = '<i class="fas fa-info-circle"></i> Visualização via Google Docs Viewer. Clique em "Baixar" para baixar o arquivo original.';
+            conteudo.appendChild(aviso);
+        } else {
+            // Outros formatos - mostrar mensagem
+            loading.innerHTML = `
+                <i class="fas fa-file fa-3x" style="color: #667eea;"></i>
+                <p class="mt-3">Este tipo de arquivo não pode ser visualizado diretamente.</p>
+                <p class="text-muted">Clique em "Baixar" para fazer o download.</p>
+                <a href="${url}" download class="btn btn-primary">
+                    <i class="fas fa-download"></i> Baixar ${nome}
+                </a>
+            `;
+        }
+    }, 600); // 🔥 AUMENTADO PARA 600ms PARA GARANTIR QUE O MODAL FECHE
+}
+
+// ===============================
+// UPLOAD ANEXO
+// ===============================
+function uploadAnexo(taskId) {
+    console.log('🚀 uploadAnexo chamado! Task ID:', taskId);
+    
+    const input = document.getElementById('file-input-' + taskId);
+    if (!input) {
+        mostrarToast('Erro: campo de arquivo não encontrado.', 'error');
+        return;
+    }
+    
+    const arquivo = input.files[0];
+    if (!arquivo) {
+        mostrarToast('Selecione um arquivo para enviar.', 'error');
+        return;
+    }
+    
+    if (arquivo.size > 10 * 1024 * 1024) {
+        mostrarToast('Arquivo muito grande. Máximo: 10MB.', 'error');
+        input.value = '';
+        return;
+    }
+    
+    const extensoesPermitidas = [
+        '.pdf', '.doc', '.docx', '.xls', '.xlsx', 
+        '.ppt', '.pptx', '.txt', '.csv',
+        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg',
+        '.zip', '.rar', '.7z'
+    ];
+    
+    const nomeArquivo = arquivo.name.toLowerCase();
+    let extensaoValida = false;
+    for (const ext of extensoesPermitidas) {
+        if (nomeArquivo.endsWith(ext)) {
+            extensaoValida = true;
+            break;
+        }
+    }
+    
+    if (!extensaoValida) {
+        mostrarToast('Tipo de arquivo não permitido.', 'error');
+        input.value = '';
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('arquivo', arquivo);
+    
+    const container = document.getElementById('anexos-container-' + taskId);
+    const progressDiv = document.createElement('div');
+    progressDiv.className = 'upload-progress mt-1';
+    progressDiv.id = 'progress-' + taskId;
+    progressDiv.innerHTML = `
+        <div class="progress" style="height: 4px;">
+            <div class="progress-bar" style="width: 0%;"></div>
+        </div>
+        <small class="text-muted" style="font-size: 10px;">Enviando ${arquivo.name}...</small>
+    `;
+    container.parentNode.insertBefore(progressDiv, container);
+    
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += 10;
+        const bar = progressDiv.querySelector('.progress-bar');
+        if (bar && progress <= 90) {
+            bar.style.width = progress + '%';
+        }
+    }, 200);
+    
+    fetch(`/task/${taskId}/upload-anexo/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken
+        },
+        body: formData
+    })
+    .then(response => {
+        clearInterval(interval);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        const progress = document.getElementById('progress-' + taskId);
+        if (progress) progress.remove();
+        
+        if (data.success) {
+            input.value = '';
+            carregarAnexos(taskId);
+            mostrarToast('✅ Arquivo enviado com sucesso!', 'success');
+        } else {
+            mostrarToast(data.error || 'Erro ao enviar arquivo.', 'error');
+        }
+    })
+    .catch(error => {
+        clearInterval(interval);
+        const progress = document.getElementById('progress-' + taskId);
+        if (progress) progress.remove();
+        
+        console.error('❌ Erro na requisição:', error);
+        mostrarToast('Erro ao enviar arquivo: ' + error.message, 'error');
+    });
+}
+
+function excluirAnexo(anexoId, taskId) {
+    if (!confirm('Excluir este anexo?')) return;
+    
+    fetch(`/anexo/${anexoId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            carregarAnexos(taskId);
+            mostrarToast('✅ Anexo excluído com sucesso!', 'success');
+        } else {
+            alert(data.error || 'Erro ao excluir anexo.');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao excluir anexo.');
+    });
+}
+
+function mostrarToast(mensagem, tipo) {
+    const toastAntigo = document.querySelector('.toast-notification');
+    if (toastAntigo) {
+        toastAntigo.remove();
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = `toast-notification ${tipo || 'info'}`;
+    toast.innerHTML = `
+        <div class="toast-content">
+            <span>${mensagem}</span>
+            <button class="toast-close" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 100);
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// ===============================
+// SUBTAREFAS
+// ===============================
+function openSubtaskModal(taskId) {
+    document.getElementById("subtask-title-" + taskId).value = "";
+    document.getElementById("subtask-prioridade-" + taskId).value = "media";
+    document.getElementById("subtask-responsavel-" + taskId).value = "";
+    document.getElementById("subtask-data-entrega-" + taskId).value = "";
+    
+    const modal = new bootstrap.Modal(document.getElementById("subtaskModal" + taskId));
+    modal.show();
+}
+
+function saveSubtask(taskId) {
+    const titulo = document.getElementById("subtask-title-" + taskId).value.trim();
+    if (!titulo) {
+        alert("Digite um título para a subtarefa");
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append("titulo", titulo);
+    formData.append("prioridade", document.getElementById("subtask-prioridade-" + taskId).value);
+    formData.append("responsavel", document.getElementById("subtask-responsavel-" + taskId).value);
+    formData.append("data_entrega", document.getElementById("subtask-data-entrega-" + taskId).value);
+    
+    fetch(`/task/${taskId}/add-subtask/`, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": csrftoken,
+            "X-Requested-With": "XMLHttpRequest"
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById("subtaskModal" + taskId));
+            modal.hide();
+            
+            adicionarSubtaskNaLista(taskId, data.subtask);
+            calcularProgresso(taskId);
+        } else {
+            alert(data.error || "Erro ao criar subtarefa");
+        }
+    })
+    .catch(error => {
+        console.error("Erro:", error);
+        alert("Erro ao criar subtarefa");
+    });
+}
+
+function adicionarSubtaskNaLista(taskId, subtask) {
+    const container = document.getElementById("subtasks-container-" + taskId);
+    
+    const noSubtasks = document.getElementById("no-subtasks-" + taskId);
+    if (noSubtasks) {
+        noSubtasks.remove();
+    }
+    
+    const div = document.createElement("div");
+    div.className = "border rounded p-2 mb-2 d-flex justify-content-between align-items-center subtask-item";
+    div.id = "subtask-" + subtask.id;
+    div.setAttribute("data-subtask-id", subtask.id);
+    
+    div.innerHTML = `
+        <div>
+            <strong>${subtask.titulo}</strong>
+            <br>
+            <small class="text-muted">
+                <span class="badge ${subtask.concluida ? 'bg-success' : 'bg-warning'}">${subtask.concluida ? 'Concluída' : 'Pendente'}</span>
+                Prioridade: ${subtask.prioridade_display}
+                ${subtask.responsavel ? `| 👤 ${subtask.responsavel}` : ''}
+                ${subtask.data_entrega ? `| 📅 ${subtask.data_entrega}` : ''}
+            </small>
+        </div>
+        <div>
+            <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="event.stopPropagation(); toggleSubtask(${subtask.id}, ${taskId})">
+                ${subtask.concluida ? '<i class="fas fa-undo"></i>' : '<i class="fas fa-check"></i>'}
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); openEditSubtaskModal(${subtask.id})">
+                <i class="fas fa-edit"></i>
+            </button>
+        </div>
+    `;
+    
+    container.appendChild(div);
+}
+
+function openEditSubtaskModal(subtaskId) {
+    const subtaskElement = document.getElementById("subtask-" + subtaskId);
+    if (!subtaskElement) return;
+    
+    const taskElement = subtaskElement.closest('.modal');
+    const taskId = taskElement ? taskElement.id.replace("taskModal", "") : null;
+    if (!taskId) return;
+    
+    const titulo = subtaskElement.querySelector('strong').textContent;
+    const prioridadeText = subtaskElement.querySelector('.text-muted').textContent;
+    let prioridade = "media";
+    if (prioridadeText.includes("Baixa")) prioridade = "baixa";
+    else if (prioridadeText.includes("Alta")) prioridade = "alta";
+    else if (prioridadeText.includes("Urgente")) prioridade = "urgente";
+    
+    const isConcluida = subtaskElement.querySelector('.badge.bg-success') !== null;
+    
+    document.getElementById("edit-subtask-title-" + taskId).value = titulo;
+    document.getElementById("edit-subtask-prioridade-" + taskId).value = prioridade;
+    document.getElementById("edit-subtask-concluida-" + taskId).value = isConcluida ? "True" : "False";
+    
+    fetch(`/task/${taskId}/subtasks/`, {
+        headers: {
+            "X-Requested-With": "XMLHttpRequest"
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const subtaskData = data.subtasks.find(s => s.id === subtaskId);
+            if (subtaskData) {
+                document.getElementById("edit-subtask-responsavel-" + taskId).value = subtaskData.responsavel_id || "";
+                document.getElementById("edit-subtask-data-entrega-" + taskId).value = subtaskData.data_entrega || "";
+            }
+        }
+    })
+    .catch(error => console.error("Erro:", error));
+    
+    const taskModal = bootstrap.Modal.getInstance(document.getElementById("taskModal" + taskId));
+    if (taskModal) taskModal.hide();
+    
+    const modal = new bootstrap.Modal(document.getElementById("editSubTaskModal" + taskId));
+    modal.show();
+    document.getElementById("editSubTaskModal" + taskId).setAttribute("data-editing-subtask", subtaskId);
+}
+
+function updateSubtask(taskId) {
+    const subtaskId = document.getElementById("editSubTaskModal" + taskId).getAttribute("data-editing-subtask");
+    if (!subtaskId) {
+        alert("Erro: subtask não identificada");
+        return;
+    }
+    
+    const titulo = document.getElementById("edit-subtask-title-" + taskId).value.trim();
+    if (!titulo) {
+        alert("Digite um título para a subtarefa");
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append("titulo", titulo);
+    formData.append("prioridade", document.getElementById("edit-subtask-prioridade-" + taskId).value);
+    formData.append("concluida", document.getElementById("edit-subtask-concluida-" + taskId).value);
+    formData.append("responsavel", document.getElementById("edit-subtask-responsavel-" + taskId).value);
+    formData.append("data_entrega", document.getElementById("edit-subtask-data-entrega-" + taskId).value);
+    
+    fetch(`/subtask/${subtaskId}/update/`, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": csrftoken,
+            "X-Requested-With": "XMLHttpRequest"
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById("editSubTaskModal" + taskId));
+            modal.hide();
+            
+            atualizarSubtaskNaLista(taskId, data.subtask);
+            calcularProgresso(taskId);
+            
+            setTimeout(() => {
+                const taskModal = new bootstrap.Modal(document.getElementById("taskModal" + taskId));
+                taskModal.show();
+            }, 300);
+        } else {
+            alert(data.error || "Erro ao atualizar subtarefa");
+        }
+    })
+    .catch(error => {
+        console.error("Erro:", error);
+        alert("Erro ao atualizar subtarefa");
+    });
+}
+
+function atualizarSubtaskNaLista(taskId, subtask) {
+    const element = document.getElementById("subtask-" + subtask.id);
+    if (!element) return;
+    
+    element.innerHTML = `
+        <div>
+            <strong>${subtask.titulo}</strong>
+            <br>
+            <small class="text-muted">
+                <span class="badge ${subtask.concluida ? 'bg-success' : 'bg-warning'}">${subtask.concluida ? 'Concluída' : 'Pendente'}</span>
+                Prioridade: ${subtask.prioridade_display}
+                ${subtask.responsavel ? `| 👤 ${subtask.responsavel}` : ''}
+                ${subtask.data_entrega ? `| 📅 ${subtask.data_entrega}` : ''}
+            </small>
+        </div>
+        <div>
+            <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="event.stopPropagation(); toggleSubtask(${subtask.id}, ${taskId})">
+                ${subtask.concluida ? '<i class="fas fa-undo"></i>' : '<i class="fas fa-check"></i>'}
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); openEditSubtaskModal(${subtask.id})">
+                <i class="fas fa-edit"></i>
+            </button>
+        </div>
+    `;
+    
+    if (subtask.concluida) {
+        element.classList.add("subtask-concluida");
+    } else {
+        element.classList.remove("subtask-concluida");
+    }
+}
+
+function deleteSubtask(taskId) {
+    const subtaskId = document.getElementById("editSubTaskModal" + taskId).getAttribute("data-editing-subtask");
+    if (!subtaskId) {
+        alert("Erro: subtask não identificada");
+        return;
+    }
+    
+    if (!confirm("Excluir esta subtarefa?")) return;
+    
+    fetch(`/subtask/${subtaskId}/delete/`, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": csrftoken
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById("editSubTaskModal" + taskId));
+            modal.hide();
+            
+            const element = document.getElementById("subtask-" + subtaskId);
+            if (element) element.remove();
+            
+            const container = document.getElementById("subtasks-container-" + taskId);
+            if (container.children.length === 0) {
+                const p = document.createElement("p");
+                p.className = "text-muted";
+                p.id = "no-subtasks-" + taskId;
+                p.textContent = "Nenhuma subtarefa";
+                container.appendChild(p);
+            }
+            
+            calcularProgresso(taskId);
+            
+            setTimeout(() => {
+                const taskModal = new bootstrap.Modal(document.getElementById("taskModal" + taskId));
+                taskModal.show();
+            }, 300);
+        }
+    })
+    .catch(error => {
+        console.error("Erro:", error);
+        alert("Erro ao excluir subtarefa");
+    });
+}
+
+// ===============================
+// NOTIFICAÇÕES
+// ===============================
+
+function carregarNotificacoes() {
+    const container = document.getElementById('conteudo-notificacoes');
+    if (!container) return;
+    
+    fetch('/notificacoes/', {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const contador = document.getElementById('contador-notificacoes');
+        
+        if (data.total_nao_lidas > 0) {
+            contador.textContent = data.total_nao_lidas;
+            contador.style.display = 'inline';
+        } else {
+            contador.style.display = 'none';
+        }
+        
+        if (data.notificacoes.length === 0) {
+            container.innerHTML = `
+                <li class="dropdown-item text-center text-muted py-4">
+                    <i class="fas fa-bell-slash" style="font-size: 32px; display: block; margin-bottom: 8px;"></i>
+                    Nenhuma notificação
+                </li>
+            `;
+        } else {
+            let html = '';
+            data.notificacoes.forEach(notif => {
+                const bgColor = notif.lida ? '' : 'background-color: #f0f4ff;';
+                const borderColor = notif.lida ? '' : 'border-left: 3px solid #667eea;';
+                
+                html += `
+                    <li class="dropdown-item" style="${bgColor} ${borderColor} padding: 12px 16px; cursor: pointer;" 
+                        onclick="abrirNotificacao(${notif.id}, '${notif.tipo}', ${notif.task_id || 'null'})">
+                        <div class="d-flex align-items-start">
+                            <div class="flex-shrink-0" style="margin-right: 12px;">
+                                <div style="width: 36px; height: 36px; border-radius: 50%; background: ${notif.cor}20; display: flex; align-items: center; justify-content: center; color: ${notif.cor};">
+                                    <i class="fas ${notif.icone}"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div style="font-size: 13px; color: #1a1a2e; line-height: 1.4;">${notif.mensagem}</div>
+                                <small class="text-muted" style="font-size: 11px;">
+                                    <i class="far fa-clock"></i> ${notif.criado_em}
+                                    ${!notif.lida ? '<span class="badge bg-primary ms-2" style="font-size: 9px;">Nova</span>' : ''}
+                                </small>
+                            </div>
+                        </div>
+                    </li>
+                `;
+            });
+            container.innerHTML = html;
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao carregar notificações:', error);
+        container.innerHTML = `
+            <li class="dropdown-item text-center text-danger py-3">
+                <i class="fas fa-exclamation-circle"></i> Erro ao carregar notificações
+            </li>
+        `;
+    });
+}
+
+function abrirNotificacao(notificacaoId, tipo, taskId) {
+    fetch(`/notificacao/${notificacaoId}/marcar-lida/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    });
+    
+    if (taskId) {
+        const dropdown = bootstrap.Dropdown.getInstance(document.getElementById('sino-notificacoes'));
+        if (dropdown) dropdown.hide();
+        
+        openTaskModal(taskId);
+    }
+}
+
+function marcarTodasLidas() {
+    if (!confirm('Marcar todas as notificações como lidas?')) return;
+    
+    fetch('/notificacoes/marcar-todas-lidas/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('contador-notificacoes').style.display = 'none';
+            carregarNotificacoes();
+        }
+    });
+}
+
+// ===============================
+// EVENTOS DE INICIALIZAÇÃO
+// ===============================
+document.addEventListener('DOMContentLoaded', function() {
+    initMentionSystem();
+    
+    document.querySelectorAll('.task-card').forEach(card => {
+        const taskId = card.dataset.taskId;
+        setTimeout(() => calcularProgresso(taskId), 200);
+    });
+
+    aplicarFiltros();
+
+    document.querySelectorAll('#filterPriority, #filterDueDate, #filterResponsavel, #filterSubtasks').forEach(el => {
+        el.addEventListener('change', aplicarFiltros);
+    });
+
+    document.querySelectorAll('select[name="responsavel"]').forEach(select => {
+        const options = select.querySelectorAll('option');
+        let hasOptions = false;
+        for (let i = 0; i < options.length; i++) {
+            if (options[i].value && options[i].value !== '') {
+                hasOptions = true;
+                break;
+            }
+        }
+        if (!hasOptions) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'Nenhum membro disponível neste setor';
+            option.disabled = true;
+            option.selected = true;
+            select.appendChild(option);
+        }
+    });
+
+    const sino = document.getElementById('sino-notificacoes');
+    if (sino) {
+        sino.addEventListener('click', function() {
+            carregarNotificacoes();
+        });
+    }
+    
+    const openTaskId = '{{ open_task_id|default:"" }}';
+    if (openTaskId) {
+        console.log('📌 Abrindo tarefa automaticamente:', openTaskId);
+        
+        setTimeout(function() {
+            if (typeof openTaskModal === 'function') {
+                openTaskModal(parseInt(openTaskId));
+                
+                const url = new URL(window.location.href);
+                url.searchParams.delete('open_task');
+                window.history.replaceState({}, document.title, url.toString());
+            } else {
+                console.warn('openTaskModal não encontrado');
+            }
+        }, 800);
+    }
+    
+    setTimeout(carregarNotificacoes, 500);
+});
+
+document.addEventListener('hidden.bs.modal', function(event) {
+    const modalId = event.target.id;
+    
+    if (modalId && modalId.startsWith('subtaskModal')) {
+        const taskId = modalId.replace('subtaskModal', '');
+        const taskModal = new bootstrap.Modal(document.getElementById('taskModal' + taskId));
+        taskModal.show();
+    }
+    
+    if (modalId && modalId.startsWith('editSubTaskModal')) {
+        const taskId = modalId.replace('editSubTaskModal', '');
+        const openModals = document.querySelectorAll('.modal.show');
+        if (openModals.length === 0) {
             const taskModal = new bootstrap.Modal(document.getElementById('taskModal' + taskId));
             taskModal.show();
         }
-        
-        if (modalId && modalId.startsWith('editSubTaskModal')) {
-            const taskId = modalId.replace('editSubTaskModal', '');
-            const openModals = document.querySelectorAll('.modal.show');
-            if (openModals.length === 0) {
-                const taskModal = new bootstrap.Modal(document.getElementById('taskModal' + taskId));
-                taskModal.show();
-            }
-        }
-    });
+    }
+});
 
-    document.addEventListener('shown.bs.modal', function(event) {
-        const modal = event.target;
-        if (modal.id && modal.id.startsWith('taskModal')) {
-            const taskId = modal.id.replace('taskModal', '');
-            setTimeout(() => calcularProgresso(taskId), 200);
-            setTimeout(initMentionSystem, 300);
-        }
-    });
+document.addEventListener('shown.bs.modal', function(event) {
+    const modal = event.target;
+    if (modal.id && modal.id.startsWith('taskModal')) {
+        const taskId = modal.id.replace('taskModal', '');
+        setTimeout(() => calcularProgresso(taskId), 200);
+        setTimeout(initMentionSystem, 300);
+    }
+});
 
-    // ===============================
-    // ATUALIZAÇÃO PERIÓDICA
-    // ===============================
-    setInterval(() => {
-        carregarNotificacoes();
-    }, 60000);
-    </script>
+setInterval(() => {
+    carregarNotificacoes();
+}, 60000);
+</script>
 </body>
 </html>

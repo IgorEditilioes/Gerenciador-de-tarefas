@@ -20,8 +20,6 @@ def admin_required(function=None, redirect_url='home'):
     return user_passes_test(check_user, login_url='home')
 
 
-# decorators.py - Adicione logs na função board_access_required
-
 def board_access_required(function=None, redirect_url='home'):
     """
     Decorator para verificar se o usuário tem acesso ao board
@@ -39,26 +37,15 @@ def board_access_required(function=None, redirect_url='home'):
             except Board.DoesNotExist:
                 raise PermissionDenied("Board não encontrado")
             
-            # 🔥 LOGS PARA DEBUG
-            print(f"🔍 ===== VERIFICANDO ACESSO AO BOARD =====")
-            print(f"🔍 Board ID: {board_id}")
-            print(f"🔍 Usuário: {request.user.username}")
-            print(f"🔍 Tipo do usuário: {request.user.tipo}")
-            print(f"🔍 Workspace do usuário: {request.user.workspace}")
-            print(f"🔍 Workspace do board: {board.workspace}")
-            
             if not check_permission_user_board(request.user, board):
-                print(f"❌ Acesso NEGADO para {request.user.username}")
                 raise PermissionDenied("Você não tem permissão para acessar este setor")
             
-            print(f"✅ Acesso PERMITIDO para {request.user.username}")
             return view_func(request, *args, **kwargs)
         return wrapper
     
     if function:
         return decorator(function)
     return decorator
-
 
 
 def gerente_or_admin_required(function=None, redirect_url='home'):

@@ -1,4 +1,6 @@
 from django.urls import path
+from django.conf import settings
+from django.conf.urls.static import static
 from .views import (
     home,
     perfil,
@@ -22,7 +24,10 @@ from .views import (
     marcar_notificacao_lida,
     marcar_todas_notificacoes_lidas,
     open_task_direct,
-    get_task_board
+    get_task_board,
+    upload_anexo,
+    delete_anexo,
+    get_anexos
 )
 
 urlpatterns = [
@@ -85,4 +90,12 @@ urlpatterns = [
 
     path('task/<int:task_id>/open/', open_task_direct, name='open_task_direct'),
     path('task/<int:task_id>/get-board/', get_task_board, name='get_task_board'),
+
+    path('task/<int:task_id>/upload-anexo/', upload_anexo, name='upload_anexo'),
+    path('anexo/<int:anexo_id>/delete/', delete_anexo, name='delete_anexo'),
+    path('task/<int:task_id>/anexos/', get_anexos, name='get_anexos'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
