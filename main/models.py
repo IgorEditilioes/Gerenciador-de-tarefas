@@ -207,6 +207,12 @@ class Task(models.Model):
         ("urgente", "Urgente"),
     )
 
+    permite_edicao_usuario = models.BooleanField(
+        default=False,
+        verbose_name="Permitir edição por usuários",
+        help_text="Permite que usuários comuns editem esta tarefa"
+    )
+
     board = models.ForeignKey(
         Board,
         on_delete=models.CASCADE,

@@ -216,7 +216,7 @@
                 </div>
 
                 <!-- ==========================
-                MODAL TAREFA
+                MODAL TAREFA (CORRIGIDO)
                 ========================== -->
                 <div class="modal fade" id="taskModal{{ task.id }}" data-task-id="{{ task.id }}">
                     <div class="modal-dialog modal-xl modal-dialog-centered">
@@ -237,50 +237,113 @@
 
                                             <hr>
 
+                                            <!-- ==========================================
+                                            CAMPOS DA TAREFA (COM PERMISSÃO CORRIGIDA)
+                                            ========================================== -->
                                             <div class="row mb-3">
                                                 <div class="col-md-6">
                                                     <h6>Status</h6>
-                                                    <select name="status" class="form-select">
-                                                        {% for s in status_list %}
-                                                        <option value="{{ s.id }}" {% if task.status.id == s.id %}selected{% endif %}>
-                                                            {{ s.nome }}
-                                                        </option>
-                                                        {% endfor %}
-                                                    </select>
+                                                    <!-- CORREÇÃO: Sem parênteses aninhados -->
+                                                    {% if user.tipo == 'admin' or user.tipo == 'gerente' or task.permite_edicao_usuario and user == task.criado_por or task.permite_edicao_usuario and user == task.responsavel %}
+                                                        <select name="status" class="form-select">
+                                                            {% for s in status_list %}
+                                                            <option value="{{ s.id }}" {% if task.status.id == s.id %}selected{% endif %}>
+                                                                {{ s.nome }}
+                                                            </option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    {% else %}
+                                                        <select name="status" class="form-select" disabled>
+                                                            <option value="{{ task.status.id }}" selected>{{ task.status.nome }}</option>
+                                                        </select>
+                                                        <input type="hidden" name="status" value="{{ task.status.id }}">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-lock"></i> Status bloqueado.
+                                                        </small>
+                                                    {% endif %}
                                                 </div>
                                                 <div class="col-md-6">
                                                     <h6>Prioridade</h6>
-                                                    <select name="prioridade" class="form-select">
-                                                        <option value="baixa" {% if task.prioridade == "baixa" %}selected{% endif %}>Baixa</option>
-                                                        <option value="media" {% if task.prioridade == "media" %}selected{% endif %}>Média</option>
-                                                        <option value="alta" {% if task.prioridade == "alta" %}selected{% endif %}>Alta</option>
-                                                        <option value="urgente" {% if task.prioridade == "urgente" %}selected{% endif %}>Urgente</option>
-                                                    </select>
+                                                    {% if user.tipo == 'admin' or user.tipo == 'gerente' or task.permite_edicao_usuario and user == task.criado_por or task.permite_edicao_usuario and user == task.responsavel %}
+                                                        <select name="prioridade" class="form-select">
+                                                            <option value="baixa" {% if task.prioridade == "baixa" %}selected{% endif %}>Baixa</option>
+                                                            <option value="media" {% if task.prioridade == "media" %}selected{% endif %}>Média</option>
+                                                            <option value="alta" {% if task.prioridade == "alta" %}selected{% endif %}>Alta</option>
+                                                            <option value="urgente" {% if task.prioridade == "urgente" %}selected{% endif %}>Urgente</option>
+                                                        </select>
+                                                    {% else %}
+                                                        <select name="prioridade" class="form-select" disabled>
+                                                            <option value="{{ task.prioridade }}" selected>{{ task.get_prioridade_display }}</option>
+                                                        </select>
+                                                        <input type="hidden" name="prioridade" value="{{ task.prioridade }}">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-lock"></i> Prioridade bloqueada.
+                                                        </small>
+                                                    {% endif %}
                                                 </div>
                                             </div>
 
                                             <div class="row mb-3">
                                                 <div class="col-md-6">
                                                     <h6>Data de entrega</h6>
-                                                    <input type="date" name="data_entrega" class="form-control" 
-                                                           value="{{ task.data_entrega|date:'Y-m-d' }}">
+                                                    {% if user.tipo == 'admin' or user.tipo == 'gerente' or task.permite_edicao_usuario and user == task.criado_por or task.permite_edicao_usuario and user == task.responsavel %}
+                                                        <input type="date" name="data_entrega" class="form-control" 
+                                                               value="{{ task.data_entrega|date:'Y-m-d' }}">
+                                                    {% else %}
+                                                        <input type="date" name="data_entrega" class="form-control" 
+                                                               value="{{ task.data_entrega|date:'Y-m-d' }}" disabled>
+                                                        <input type="hidden" name="data_entrega" value="{{ task.data_entrega|date:'Y-m-d' }}">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-lock"></i> Data bloqueada.
+                                                        </small>
+                                                    {% endif %}
                                                 </div>
                                                 <div class="col-md-6">
                                                     <h6>Responsável</h6>
-                                                    <select name="responsavel" class="form-select" id="responsavel-select-{{ task.id }}">
-                                                        <option value="">Sem responsável</option>
-                                                        {% for usuario in usuarios_board %}
-                                                        <option value="{{ usuario.id }}" {% if task.responsavel.id == usuario.id %}selected{% endif %}>
-                                                            {{ usuario.get_full_name|default:usuario.username }}
-                                                            {% if usuario.tipo == 'admin' %} (Admin){% elif usuario.tipo == 'gerente' %} (Gerente){% endif %}
-                                                        </option>
-                                                        {% endfor %}
-                                                    </select>
-                                                    <small class="text-muted">
-                                                        <i class="fas fa-info-circle"></i> Apenas membros deste setor
-                                                    </small>
+                                                    {% if user.tipo == 'admin' or user.tipo == 'gerente' or task.permite_edicao_usuario and user == task.criado_por or task.permite_edicao_usuario and user == task.responsavel %}
+                                                        <select name="responsavel" class="form-select" id="responsavel-select-{{ task.id }}">
+                                                            <option value="">Sem responsável</option>
+                                                            {% for usuario in usuarios_board %}
+                                                            <option value="{{ usuario.id }}" {% if task.responsavel.id == usuario.id %}selected{% endif %}>
+                                                                {{ usuario.get_full_name|default:usuario.username }}
+                                                                {% if usuario.tipo == 'admin' %} (Admin){% elif usuario.tipo == 'gerente' %} (Gerente){% endif %}
+                                                            </option>
+                                                            {% endfor %}
+                                                        </select>
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-info-circle"></i> Apenas membros deste setor
+                                                        </small>
+                                                    {% else %}
+                                                        <select name="responsavel" class="form-select" disabled>
+                                                            <option value="{{ task.responsavel.id|default:'' }}" selected>
+                                                                {% if task.responsavel %}
+                                                                    {{ task.responsavel.get_full_name|default:task.responsavel.username }}
+                                                                {% else %}
+                                                                    Sem responsável
+                                                                {% endif %}
+                                                            </option>
+                                                        </select>
+                                                        <input type="hidden" name="responsavel" value="{{ task.responsavel.id|default:'' }}">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-lock"></i> Responsável bloqueado.
+                                                        </small>
+                                                    {% endif %}
                                                 </div>
                                             </div>
+
+                                            <!-- CHECKBOX: PERMITIR EDIÇÃO POR USUÁRIOS (APENAS ADMIN E GERENTE) -->
+                                            {% if user.tipo == 'admin' or user.tipo == 'gerente' %}
+                                            <div class="form-check mb-3">
+                                                <input type="checkbox" name="permite_edicao_usuario" id="permiteEdicao-{{ task.id }}" 
+                                                       class="form-check-input" {% if task.permite_edicao_usuario %}checked{% endif %}>
+                                                <label class="form-check-label" for="permiteEdicao-{{ task.id }}">
+                                                    <i class="fas fa-user-edit"></i> Permitir que usuários editem esta tarefa
+                                                </label>
+                                                <small class="form-text text-muted d-block">
+                                                    Marque esta opção para permitir que usuários comuns editem os campos principais desta tarefa.
+                                                </small>
+                                            </div>
+                                            {% endif %}
 
                                             <hr>
 
@@ -369,9 +432,7 @@
                                         </div>
 
                                         <div class="col-md-4 border-start">
-                                            <!-- =============================================
-                                                 COMENTÁRIOS
-                                            ============================================= -->
+                                            <!-- COMENTÁRIOS -->
                                             <h6>Comentários</h6>
                                             <div class="comments-area" id="comments-{{ task.id }}" style="max-height: 400px; overflow-y: auto;">
                                                 {% for comment in task.comments.all %}
@@ -389,9 +450,7 @@
 
                                             <hr>
 
-                                            <!-- =============================================
-                                                 SEÇÃO DE ANEXOS COM VISUALIZAÇÃO
-                                            ============================================= -->
+                                            <!-- ANEXOS -->
                                             <h6>
                                                 <i class="fas fa-paperclip"></i> Anexos 
                                                 <span class="badge bg-secondary" id="anexos-count-{{ task.id }}">0</span>
@@ -419,7 +478,7 @@
                                 </div>
 
                                 <div class="modal-footer">
-                                    {% if user.tipo == 'gerente' %}
+                                    {% if user.tipo == 'gerente' or user.tipo == 'admin' %}
                                         <button type="button" class="btn btn-danger" onclick="deleteTask({{ task.id }})">
                                             <i class="fas fa-trash"></i> Excluir
                                         </button>
@@ -568,6 +627,21 @@
                                 <input type="date" name="data_entrega" class="form-control mb-3">
                             </div>
                         </div>
+
+                        <!-- CHECKBOX: PERMITIR EDIÇÃO POR USUÁRIOS (APENAS ADMIN E GERENTE) -->
+                        {% if user.tipo == 'admin' or user.tipo == 'gerente' %}
+                        <div class="form-check mb-3">
+                            <input type="checkbox" name="permite_edicao_usuario" id="permiteEdicaoNova" class="form-check-input">
+                            <label class="form-check-label" for="permiteEdicaoNova">
+                                <i class="fas fa-user-edit"></i> Permitir que usuários editem esta tarefa
+                            </label>
+                            <small class="form-text text-muted d-block">
+                                Marque esta opção para permitir que usuários comuns editem os campos principais desta tarefa.
+                            </small>
+                        </div>
+                        {% else %}
+                        <input type="hidden" name="permite_edicao_usuario" value="off">
+                        {% endif %}
                         
                         <label class="mb-1">Responsável</label>
                         <select name="responsavel" class="form-select">
@@ -625,7 +699,7 @@
     </div>
 
 <!-- =====================================================
-     SCRIPTS COMPLETOS DO BOARD.HTML (CORRIGIDO)
+     SCRIPTS
      ===================================================== -->
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -962,7 +1036,7 @@ document.querySelectorAll('.kanban-column').forEach(column => {
                 card.style.opacity = '1';
                 card.style.pointerEvents = 'auto';
             }
-            alert('Erro ao mover tarefa. Tente novamente.');
+            alert('A tarefa só pode ser concluída pelo gerente.');
         });
     });
 });
@@ -1172,9 +1246,8 @@ function addComment(taskId) {
 }
 
 // ===============================
-// ANEXOS COM VISUALIZAÇÃO (CORRIGIDO)
+// ANEXOS
 // ===============================
-
 function carregarAnexos(taskId) {
     const container = document.getElementById('anexos-container-' + taskId);
     if (!container) return;
@@ -1196,29 +1269,9 @@ function carregarAnexos(taskId) {
                         <i class="fas fa-trash"></i>
                      </button>` : '';
                 
-                // 🔥 VERIFICAR SE PODE VISUALIZAR
-                const tipoVisualizavel = anexo.tipo ? anexo.tipo.toLowerCase() : '';
-                const podeVisualizar = 
-                    tipoVisualizavel.startsWith('image/') ||
-                    tipoVisualizavel === 'application/pdf' ||
-                    tipoVisualizavel.startsWith('text/') ||
-                    tipoVisualizavel.includes('word') ||
-                    tipoVisualizavel.includes('document') ||
-                    tipoVisualizavel.includes('sheet') ||
-                    tipoVisualizavel.includes('excel') ||
-                    tipoVisualizavel.includes('presentation') ||
-                    tipoVisualizavel.includes('powerpoint') ||
-                    anexo.nome.toLowerCase().endsWith('.docx') ||
-                    anexo.nome.toLowerCase().endsWith('.doc') ||
-                    anexo.nome.toLowerCase().endsWith('.xlsx') ||
-                    anexo.nome.toLowerCase().endsWith('.xls') ||
-                    anexo.nome.toLowerCase().endsWith('.pptx') ||
-                    anexo.nome.toLowerCase().endsWith('.ppt');
-                
-                const botaoVisualizar = podeVisualizar ? 
-                    `<button class="btn btn-sm btn-outline-info" onclick="event.stopPropagation(); visualizarAnexo('${anexo.url}', '${anexo.nome}', '${anexo.tipo}')">
+                const botaoVisualizar = `<button class="btn btn-sm btn-outline-info" onclick="event.stopPropagation(); visualizarAnexo('${anexo.url}', '${anexo.nome}', '${anexo.tipo}')">
                         <i class="fas fa-eye"></i>
-                     </button>` : '';
+                     </button>`;
                 
                 html += `
                     <div class="anexo-item" id="anexo-${anexo.id}">
@@ -1261,18 +1314,13 @@ function carregarAnexos(taskId) {
     });
 }
 
-// ===============================
-// VISUALIZAR ANEXO (VERSÃO FINAL CORRIGIDA)
-// ===============================
 function visualizarAnexo(url, nome, tipo) {
-    console.log('👁️ Visualizando:', nome, 'URL:', url, 'Tipo:', tipo);
+    console.log('Visualizando:', nome, 'URL:', url, 'Tipo:', tipo);
     
-    // Prevenir propagação do evento
     if (event) {
         event.stopPropagation();
     }
     
-    // 🔥 FECHAR O MODAL DA TAREFA
     const taskModal = document.querySelector('.modal.show');
     if (taskModal) {
         const modalInstance = bootstrap.Modal.getInstance(taskModal);
@@ -1281,7 +1329,6 @@ function visualizarAnexo(url, nome, tipo) {
         }
     }
     
-    // 🔥 ESPERAR O MODAL FECHAR E ABRIR O DE VISUALIZAÇÃO
     setTimeout(() => {
         const modalElement = document.getElementById('visualizarAnexoModal');
         const modal = new bootstrap.Modal(modalElement, {
@@ -1294,12 +1341,10 @@ function visualizarAnexo(url, nome, tipo) {
         const loading = document.getElementById('anexoLoading');
         const downloadLink = document.getElementById('anexoDownloadLink');
         
-        // Resetar o conteúdo
         titulo.textContent = nome;
         downloadLink.href = url;
         downloadLink.download = nome;
         
-        // Mostrar loading
         loading.style.display = 'block';
         loading.innerHTML = `
             <i class="fas fa-spinner fa-spin fa-3x" style="color: #667eea;"></i>
@@ -1308,15 +1353,12 @@ function visualizarAnexo(url, nome, tipo) {
         conteudo.style.display = 'none';
         conteudo.innerHTML = '';
         
-        // 🔥 ABRIR O MODAL
         modal.show();
         
         const tipoLower = tipo ? tipo.toLowerCase() : '';
         const nomeLower = nome.toLowerCase();
         
-        // 🔥 VERIFICAR TIPO DO ARQUIVO
         if (tipoLower && tipoLower.startsWith('image/')) {
-            // Imagem
             const img = document.createElement('img');
             img.src = url;
             img.className = 'img-fluid';
@@ -1336,7 +1378,6 @@ function visualizarAnexo(url, nome, tipo) {
                 `;
             };
         } else if (tipoLower === 'application/pdf' || nomeLower.endsWith('.pdf')) {
-            // PDF - usar iframe com visualização nativa do navegador
             const iframe = document.createElement('iframe');
             iframe.src = url;
             iframe.style.width = '100%';
@@ -1348,7 +1389,6 @@ function visualizarAnexo(url, nome, tipo) {
             conteudo.style.display = 'block';
             conteudo.appendChild(iframe);
         } else if (tipoLower && tipoLower.startsWith('text/') || nomeLower.endsWith('.txt') || nomeLower.endsWith('.csv')) {
-            // Arquivo de texto
             fetch(url)
                 .then(response => response.text())
                 .then(text => {
@@ -1380,7 +1420,6 @@ function visualizarAnexo(url, nome, tipo) {
             nomeLower.endsWith('.xlsx') || nomeLower.endsWith('.xls') ||
             nomeLower.endsWith('.pptx') || nomeLower.endsWith('.ppt')
         ) {
-            // 🔥 ARQUIVOS DO OFFICE - Usar Google Docs Viewer
             const viewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(window.location.origin + url)}&embedded=true`;
             
             const iframe = document.createElement('iframe');
@@ -1394,13 +1433,11 @@ function visualizarAnexo(url, nome, tipo) {
             conteudo.style.display = 'block';
             conteudo.appendChild(iframe);
             
-            // Adicionar aviso
             const aviso = document.createElement('p');
             aviso.className = 'text-muted mt-2 small';
             aviso.innerHTML = '<i class="fas fa-info-circle"></i> Visualização via Google Docs Viewer. Clique em "Baixar" para baixar o arquivo original.';
             conteudo.appendChild(aviso);
         } else {
-            // Outros formatos - mostrar mensagem
             loading.innerHTML = `
                 <i class="fas fa-file fa-3x" style="color: #667eea;"></i>
                 <p class="mt-3">Este tipo de arquivo não pode ser visualizado diretamente.</p>
@@ -1410,14 +1447,11 @@ function visualizarAnexo(url, nome, tipo) {
                 </a>
             `;
         }
-    }, 600); // 🔥 AUMENTADO PARA 600ms PARA GARANTIR QUE O MODAL FECHE
+    }, 600);
 }
 
-// ===============================
-// UPLOAD ANEXO
-// ===============================
 function uploadAnexo(taskId) {
-    console.log('🚀 uploadAnexo chamado! Task ID:', taskId);
+    console.log('Upload anexo chamado! Task ID:', taskId);
     
     const input = document.getElementById('file-input-' + taskId);
     if (!input) {
@@ -1504,7 +1538,7 @@ function uploadAnexo(taskId) {
         if (data.success) {
             input.value = '';
             carregarAnexos(taskId);
-            mostrarToast('✅ Arquivo enviado com sucesso!', 'success');
+            mostrarToast('Arquivo enviado com sucesso!', 'success');
         } else {
             mostrarToast(data.error || 'Erro ao enviar arquivo.', 'error');
         }
@@ -1514,7 +1548,7 @@ function uploadAnexo(taskId) {
         const progress = document.getElementById('progress-' + taskId);
         if (progress) progress.remove();
         
-        console.error('❌ Erro na requisição:', error);
+        console.error('Erro na requisição:', error);
         mostrarToast('Erro ao enviar arquivo: ' + error.message, 'error');
     });
 }
@@ -1533,7 +1567,7 @@ function excluirAnexo(anexoId, taskId) {
     .then(data => {
         if (data.success) {
             carregarAnexos(taskId);
-            mostrarToast('✅ Anexo excluído com sucesso!', 'success');
+            mostrarToast('Anexo excluído com sucesso!', 'success');
         } else {
             alert(data.error || 'Erro ao excluir anexo.');
         }
@@ -1837,7 +1871,6 @@ function deleteSubtask(taskId) {
 // ===============================
 // NOTIFICAÇÕES
 // ===============================
-
 function carregarNotificacoes() {
     const container = document.getElementById('conteudo-notificacoes');
     if (!container) return;
@@ -1985,7 +2018,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const openTaskId = '{{ open_task_id|default:"" }}';
     if (openTaskId) {
-        console.log('📌 Abrindo tarefa automaticamente:', openTaskId);
+        console.log('Abrindo tarefa automaticamente:', openTaskId);
         
         setTimeout(function() {
             if (typeof openTaskModal === 'function') {

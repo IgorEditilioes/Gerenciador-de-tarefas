@@ -9,9 +9,7 @@ from functools import wraps
 # ==========================================
 
 def admin_required(function=None, redirect_url='home'):
-    """
-    Decorator para usuários administradores
-    """
+    """Decorator para usuários administradores"""
     def check_user(user):
         return user.is_authenticated and user.tipo == 'admin'
     
@@ -21,9 +19,7 @@ def admin_required(function=None, redirect_url='home'):
 
 
 def board_access_required(function=None, redirect_url='home'):
-    """
-    Decorator para verificar se o usuário tem acesso ao board
-    """
+    """Decorator para verificar se o usuário tem acesso ao board"""
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
@@ -49,9 +45,7 @@ def board_access_required(function=None, redirect_url='home'):
 
 
 def gerente_or_admin_required(function=None, redirect_url='home'):
-    """
-    Decorator para usuários gerentes ou administradores
-    """
+    """Decorator para usuários gerentes ou administradores"""
     def check_user(user):
         return user.is_authenticated and user.tipo in ['gerente', 'admin']
     
@@ -61,9 +55,7 @@ def gerente_or_admin_required(function=None, redirect_url='home'):
 
 
 def usuario_or_higher_required(function=None, redirect_url='home'):
-    """
-    Decorator para qualquer usuário logado (todos os tipos)
-    """
+    """Decorator para qualquer usuário logado (todos os tipos)"""
     def check_user(user):
         return user.is_authenticated
     
@@ -77,25 +69,18 @@ def usuario_or_higher_required(function=None, redirect_url='home'):
 # ==========================================
 
 def check_permission_user_workspace(user, workspace):
-    """
-    Verifica se o usuário pertence ao workspace
-    """
+    """Verifica se o usuário pertence ao workspace"""
     return user.workspace == workspace
 
 
 def check_permission_user_board(user, board):
-    """
-    Verifica se o usuário tem permissão para acessar o board
-    """
-    # Admin tem acesso a tudo
+    """Verifica se o usuário tem permissão para acessar o board"""
     if user.tipo == 'admin':
         return True
     
-    # Gerente acessa boards do seu workspace
     if user.tipo == 'gerente':
         return user.workspace == board.workspace
     
-    # Usuário comum: verifica se é membro do board
     if user.tipo == 'usuario':
         from .models import BoardMember
         return BoardMember.objects.filter(board=board, usuario=user).exists()
@@ -106,31 +91,37 @@ def check_permission_user_board(user, board):
 def check_permission_edit_task(user, task):
     """
     Verifica se o usuário pode editar a tarefa
+    
+    Regras:
+    - Admin: sempre pode
+    - Gerente: pode editar qualquer tarefa do workspace
+    - Usuário: só pode editar SE:
+        1. For o criador da tarefa (criado_por == user) 
+           OU o responsável (responsavel == user)
+        2. E o campo permite_edicao_usuario == True
     """
-    # Admin tem acesso a tudo
     if user.tipo == 'admin':
         return True
     
-    # Gerente pode editar qualquer tarefa do workspace
     if user.tipo == 'gerente':
         return user.workspace == task.board.workspace
     
-    # Usuário comum: só pode editar se for o responsável ou criador
     if user.tipo == 'usuario':
-        return user == task.responsavel or user == task.criado_por
+        # 🔥 CORREÇÃO: Usuário só pode editar se o gerente permitiu
+        if not task.permite_edicao_usuario:
+            return False
+        
+        # E se for o criador ou responsável
+        return user == task.criado_por or user == task.responsavel
     
     return False
 
 
 def check_permission_delete_task(user, task):
-    """
-    Verifica se o usuário pode excluir a tarefa
-    """
-    # Admin pode excluir qualquer tarefa
+    """Verifica se o usuário pode excluir a tarefa"""
     if user.tipo == 'admin':
         return True
     
-    # Gerente pode excluir qualquer tarefa do workspace
     if user.tipo == 'gerente':
         return user.workspace == task.board.workspace
     
@@ -139,15 +130,10 @@ def check_permission_delete_task(user, task):
 
 
 def check_permission_complete_task(user, task):
-    """
-    Verifica se o usuário pode marcar a tarefa como concluída
-    Apenas Gerente e Admin podem alterar status para concluído
-    """
-    # Admin pode completar qualquer tarefa
+    """Verifica se o usuário pode marcar a tarefa como concluída"""
     if user.tipo == 'admin':
         return True
     
-    # Gerente pode completar qualquer tarefa do workspace
     if user.tipo == 'gerente':
         return user.workspace == task.board.workspace
     
@@ -156,15 +142,10 @@ def check_permission_complete_task(user, task):
 
 
 def check_permission_delete_board(user, board):
-    """
-    Verifica se o usuário pode excluir o board
-    Apenas Admin e Gerente podem excluir boards
-    """
-    # Admin pode excluir qualquer board
+    """Verifica se o usuário pode excluir o board"""
     if user.tipo == 'admin':
         return True
     
-    # Gerente pode excluir boards do seu workspace
     if user.tipo == 'gerente':
         return user.workspace == board.workspace
     
@@ -173,33 +154,25 @@ def check_permission_delete_board(user, board):
 
 
 def check_permission_edit_subtask(user, subtask):
-    """
-    Verifica se o usuário pode editar a subtarefa
-    """
-    # Admin tem acesso a tudo
+    """Verifica se o usuário pode editar a subtarefa"""
     if user.tipo == 'admin':
         return True
     
-    # Gerente pode editar qualquer subtarefa do workspace
     if user.tipo == 'gerente':
         return user.workspace == subtask.task.board.workspace
     
-    # Usuário comum: só pode editar se for o responsável ou criador
     if user.tipo == 'usuario':
+        # Usuário pode editar se for o responsável ou criador
         return user == subtask.responsavel or user == subtask.criado_por
     
     return False
 
 
 def check_permission_delete_subtask(user, subtask):
-    """
-    Verifica se o usuário pode excluir a subtarefa
-    """
-    # Admin pode excluir qualquer subtarefa
+    """Verifica se o usuário pode excluir a subtarefa"""
     if user.tipo == 'admin':
         return True
     
-    # Gerente pode excluir qualquer subtarefa do workspace
     if user.tipo == 'gerente':
         return user.workspace == subtask.task.board.workspace
     
@@ -208,18 +181,13 @@ def check_permission_delete_subtask(user, subtask):
 
 
 def check_permission_create_task(user, board):
-    """
-    Verifica se o usuário pode criar tarefas no board
-    """
-    # Admin pode criar em qualquer board
+    """Verifica se o usuário pode criar tarefas no board"""
     if user.tipo == 'admin':
         return True
     
-    # Gerente pode criar em boards do seu workspace
     if user.tipo == 'gerente':
         return user.workspace == board.workspace
     
-    # Usuário comum pode criar tarefas apenas em boards do seu workspace
     if user.tipo == 'usuario':
         return user.workspace == board.workspace
     
@@ -227,14 +195,10 @@ def check_permission_create_task(user, board):
 
 
 def check_permission_create_board(user, workspace):
-    """
-    Verifica se o usuário pode criar boards
-    """
-    # Admin pode criar em qualquer workspace
+    """Verifica se o usuário pode criar boards"""
     if user.tipo == 'admin':
         return True
     
-    # Gerente pode criar no seu workspace
     if user.tipo == 'gerente':
         return user.workspace == workspace
     
