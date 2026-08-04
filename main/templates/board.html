@@ -595,7 +595,7 @@
     </div>
 
     <!-- =====================================================
-         MODAL NOVA TAREFA
+         MODAL NOVA TAREFA (CORRIGIDO - CHECKBOX MARCADO POR PADRÃO)
     ===================================================== -->
     <div class="modal fade" id="addTaskModal">
         <div class="modal-dialog">
@@ -629,9 +629,10 @@
                         </div>
 
                         <!-- CHECKBOX: PERMITIR EDIÇÃO POR USUÁRIOS (APENAS ADMIN E GERENTE) -->
+                        <!-- ✅ CORREÇÃO: Adicionado 'checked' para vir marcado por padrão -->
                         {% if user.tipo == 'admin' or user.tipo == 'gerente' %}
                         <div class="form-check mb-3">
-                            <input type="checkbox" name="permite_edicao_usuario" id="permiteEdicaoNova" class="form-check-input">
+                            <input type="checkbox" name="permite_edicao_usuario" id="permiteEdicaoNova" class="form-check-input" checked>
                             <label class="form-check-label" for="permiteEdicaoNova">
                                 <i class="fas fa-user-edit"></i> Permitir que usuários editem esta tarefa
                             </label>
@@ -640,7 +641,7 @@
                             </small>
                         </div>
                         {% else %}
-                        <input type="hidden" name="permite_edicao_usuario" value="off">
+                        <input type="hidden" name="permite_edicao_usuario" value="on">
                         {% endif %}
                         
                         <label class="mb-1">Responsável</label>

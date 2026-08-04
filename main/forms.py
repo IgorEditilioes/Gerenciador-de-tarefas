@@ -343,7 +343,7 @@ class TaskForm(forms.ModelForm):
             'board',
             'responsavel',
             'prioridade',
-            'data_entrega',        # ← CORRIGIDO: era 'prazo'
+            'data_entrega',
             'permite_edicao_usuario'
         ]
         widgets = {
@@ -366,7 +366,7 @@ class TaskForm(forms.ModelForm):
             'prioridade': forms.Select(attrs={
                 'class': 'form-select'
             }),
-            'data_entrega': forms.DateInput(attrs={    # ← CORRIGIDO: era 'prazo'
+            'data_entrega': forms.DateInput(attrs={
                 'class': 'form-control',
                 'type': 'date'
             }),
@@ -380,7 +380,7 @@ class TaskForm(forms.ModelForm):
             'board': 'Setor',
             'responsavel': 'Responsável',
             'prioridade': 'Prioridade',
-            'data_entrega': 'Prazo',          # ← CORRIGIDO: era 'prazo'
+            'data_entrega': 'Prazo',
             'permite_edicao_usuario': 'Permitir edição por usuários',
         }
         help_texts = {
@@ -398,25 +398,104 @@ class TaskForm(forms.ModelForm):
         self._configure_board_field()
         self._configure_responsavel_field()
         self._configure_permicao_edicao()
-        self._configure_data_entrega()  # ← NOME ATUALIZADO
+        self._configure_data_entrega()
         
         if self.instance and self.instance.pk and self.user:
             self._check_edit_permissions()
     
-    # ... outras funções ...
+    def _configure_board_field(self):
+        if self.board_id:
+            self.fields['board'].initial = self.board_id
+            self.fields['board'].queryset = Board.objects.filter(id=self.board_id)
+            self.fields['board'].widget = forms.HiddenInput()
+            self.fields['board'].required = True
+        elif self.instance and self.instance.pk and hasattr(self.instance, 'board'):
+            self.fields['board'].queryset = Board.objects.filter(id=self.instance.board.id)
+            self.fields['board'].widget = forms.HiddenInput()
+            self.fields['board'].required = True
+        elif self.user:
+            boards = Board.objects.filter(workspace=self.user.workspace)
+            self.fields['board'].queryset = boards
+            self.fields['board'].empty_label = "Selecione um setor"
     
-    def _configure_data_entrega(self):  # ← NOME ATUALIZADO
-        """
-        Configura data de entrega com valor padrão
-        """
+    def _configure_responsavel_field(self):
+        if self.user:
+            usuarios = User.objects.filter(
+                workspace=self.user.workspace
+            ).order_by('first_name')
+            
+            self.fields['responsavel'].queryset = usuarios
+            self.fields['responsavel'].empty_label = "Selecione um responsável"
+            
+            choices = [('', 'Selecione um responsável')]
+            for usuario in usuarios:
+                tipo_label = {
+                    'admin': '👑 Admin',
+                    'gerente': '👔 Gerente',
+                    'usuario': '👤 Usuário'
+                }.get(usuario.tipo, usuario.tipo)
+                choices.append((usuario.id, f"{usuario.get_full_name()} ({tipo_label})"))
+            
+            self.fields['responsavel'].choices = choices
+    
+    def _configure_permicao_edicao(self):
+        if self.user:
+            if self.user.tipo not in ['admin', 'gerente']:
+                # Usuário comum: campo escondido e False
+                self.fields['permite_edicao_usuario'].widget = forms.HiddenInput()
+                self.fields['permite_edicao_usuario'].required = False
+                self.fields['permite_edicao_usuario'].disabled = True
+                self.fields['permite_edicao_usuario'].initial = False
+            else:
+                # Admin ou Gerente: mostra o checkbox
+                self.fields['permite_edicao_usuario'].widget = forms.CheckboxInput(attrs={
+                    'class': 'form-check-input'
+                })
+                # ✅ Para nova tarefa, usar o default do modelo (True)
+                if not self.instance or not self.instance.pk:
+                    self.fields['permite_edicao_usuario'].initial = True
+                else:
+                    # Para edição, manter o valor atual
+                    self.fields['permite_edicao_usuario'].initial = self.instance.permite_edicao_usuario
+    
+    def _configure_data_entrega(self):
         if not self.instance or not self.instance.pk:
             self.fields['prioridade'].initial = 'media'
             self.fields['data_entrega'].initial = timezone.now().date() + timezone.timedelta(days=7)
     
-    def clean_data_entrega(self):  # ← NOME ATUALIZADO (era clean_prazo)
-        """
-        Validação da data de entrega
-        """
+    def _check_edit_permissions(self):
+        if not self.user:
+            return
+        
+        pode_editar = check_permission_edit_task(self.user, self.instance)
+        if not pode_editar:
+            for field_name, field in self.fields.items():
+                if field_name == 'permite_edicao_usuario':
+                    continue
+                field.disabled = True
+                field.widget.attrs['readonly'] = True
+                field.widget.attrs['disabled'] = True
+                
+                if isinstance(field.widget, forms.Select):
+                    field.widget.attrs['class'] = field.widget.attrs.get('class', '') + ' disabled'
+    
+    def clean_titulo(self):
+        titulo = self.cleaned_data.get('titulo', '').strip()
+        if not titulo:
+            raise ValidationError('O título da tarefa é obrigatório.')
+        if len(titulo) < 3:
+            raise ValidationError('O título deve ter pelo menos 3 caracteres.')
+        if len(titulo) > 200:
+            raise ValidationError('O título deve ter no máximo 200 caracteres.')
+        return titulo
+    
+    def clean_descricao(self):
+        descricao = self.cleaned_data.get('descricao', '').strip()
+        if descricao and len(descricao) > 2000:
+            raise ValidationError('A descrição deve ter no máximo 2000 caracteres.')
+        return descricao
+    
+    def clean_data_entrega(self):
         data_entrega = self.cleaned_data.get('data_entrega')
         if not data_entrega:
             return None
@@ -425,7 +504,46 @@ class TaskForm(forms.ModelForm):
             raise ValidationError('O prazo não pode ser uma data passada.')
         return data_entrega
     
-    # O resto do código permanece igual
+    def clean_board(self):
+        board = self.cleaned_data.get('board')
+        if not board:
+            raise ValidationError('Selecione um setor.')
+        if self.user and not check_permission_create_task(self.user, board):
+            raise ValidationError('Você não tem permissão para criar tarefas neste setor.')
+        return board
+    
+    def clean_responsavel(self):
+        responsavel = self.cleaned_data.get('responsavel')
+        if not responsavel:
+            return responsavel
+        if self.user and responsavel.workspace != self.user.workspace:
+            raise ValidationError('O responsável deve pertencer ao mesmo workspace.')
+        return responsavel
+    
+    def clean_permite_edicao_usuario(self):
+        permite = self.cleaned_data.get('permite_edicao_usuario', False)
+        if self.user and self.user.tipo == 'usuario':
+            return False
+        return permite
+    
+    def save(self, commit=True):
+        instance = super(TaskForm, self).save(commit=False)
+        
+        if not instance.pk and self.user:
+            instance.criado_por = self.user
+        
+        # ✅ REMOVIDO: Não forçar False para usuários comuns
+        # O valor vem do formulário corretamente
+        
+        if commit:
+            instance.save()
+            if instance.responsavel:
+                BoardMember.objects.get_or_create(
+                    board=instance.board,
+                    usuario=instance.responsavel
+                )
+        
+        return instance
 
 
 class TaskCreateForm(TaskForm):
@@ -435,9 +553,13 @@ class TaskCreateForm(TaskForm):
     def __init__(self, *args, **kwargs):
         super(TaskCreateForm, self).__init__(*args, **kwargs)
         if self.user and self.user.tipo not in ['admin', 'gerente']:
+            # Usuário comum: campo escondido e False
             self.fields['permite_edicao_usuario'].initial = False
             self.fields['permite_edicao_usuario'].disabled = True
             self.fields['permite_edicao_usuario'].widget = forms.HiddenInput()
+        else:
+            # ✅ Admin/Gerente: iniciar com True (default do modelo)
+            self.fields['permite_edicao_usuario'].initial = True
 
 
 class TaskUpdateForm(TaskForm):

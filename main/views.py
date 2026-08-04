@@ -583,7 +583,7 @@ def get_task_board(request, task_id):
 
 
 # =========================
-# ADD TASK
+# ADD TASK (CORRIGIDO)
 # =========================
 @login_required
 def add_task(request, board_id):
@@ -657,6 +657,16 @@ def add_task(request, board_id):
     if data_entrega == '':
         data_entrega = None
 
+    # ✅ CORREÇÃO: Respeitar o valor do checkbox
+    # Para Admin e Gerente: usar o valor do checkbox
+    # Para Usuário comum: sempre True (pode editar as próprias tarefas)
+    if usuario.tipo in ['admin', 'gerente']:
+        # Admin/Gerente: usa o valor enviado pelo checkbox
+        permite_edicao_usuario = request.POST.get("permite_edicao_usuario") == 'on'
+    else:
+        # Usuário comum: sempre True (pode editar as próprias tarefas)
+        permite_edicao_usuario = True
+
     task = Task.objects.create(
         board=board,
         workflow=workflow,
@@ -668,7 +678,7 @@ def add_task(request, board_id):
         criado_por=usuario,
         atualizado_por=usuario,
         data_entrega=data_entrega,
-        permite_edicao_usuario=request.POST.get("permite_edicao_usuario") == 'on'
+        permite_edicao_usuario=permite_edicao_usuario
     )
 
     TaskHistory.objects.create(
@@ -684,6 +694,7 @@ def add_task(request, board_id):
 
     messages.success(request, "Tarefa criada com sucesso!")
     return redirect("board", board_id=board.id)
+
 
 
 # =========================

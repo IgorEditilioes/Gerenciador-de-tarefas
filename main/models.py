@@ -208,7 +208,7 @@ class Task(models.Model):
     )
 
     permite_edicao_usuario = models.BooleanField(
-        default=False,
+        default=True,
         verbose_name="Permitir edição por usuários",
         help_text="Permite que usuários comuns editem esta tarefa"
     )
