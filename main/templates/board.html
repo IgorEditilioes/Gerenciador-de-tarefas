@@ -5,11 +5,422 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ board.nome }}</title>
+    
+    <!-- Favicon para evitar erro 404 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/at.js/1.5.4/css/jquery.atwho.min.css">
     <link rel="stylesheet" href="{% static 'css/board.css' %}">
+    
+    <style>
+        /* ========== ESTILOS GERAIS ========== */
+        body {
+            background: #f0f2f5;
+        }
+        
+        /* ========== ESTILOS PARA VISUALIZAÇÃO EM LISTA ========== */
+        .view-list .kanban-container {
+            display: none !important;
+        }
+        
+        .view-list .table-container {
+            display: block !important;
+        }
+        
+        .kanban-container {
+            display: flex;
+        }
+        
+        .table-container {
+            display: none;
+        }
+        
+        /* ========== ESTILOS DA TABELA ========== */
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            margin-top: 16px;
+        }
+        
+        .table-container .list-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 16px 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            align-items: center;
+            border: 1px solid #e9ecef;
+        }
+        
+        .table-container .list-filters label {
+            font-weight: 600;
+            font-size: 13px;
+            margin: 0;
+            white-space: nowrap;
+            color: #495057;
+        }
+        
+        .table-container .list-filters select,
+        .table-container .list-filters input {
+            padding: 8px 14px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 13px;
+            background: white;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            min-width: 140px;
+        }
+        
+        .table-container .list-filters select:focus,
+        .table-container .list-filters input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+            outline: none;
+        }
+        
+        .table-container .list-filters .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .table-container .list-filters .filter-stats {
+            margin-left: auto;
+            font-weight: 500;
+            color: #495057;
+            background: #e9ecef;
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+        
+        .table-container .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .table-container table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            border-radius: 10px;
+        }
+        
+        .table-container thead {
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .table-container th {
+            padding: 14px 18px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #495057;
+            border-bottom: 2px solid #e9ecef;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #f8f9fa;
+        }
+        
+        .table-container td {
+            padding: 14px 18px;
+            border-bottom: 1px solid #f1f3f5;
+            vertical-align: middle;
+            color: #212529;
+            transition: background 0.15s;
+        }
+        
+        .table-container tbody tr {
+            transition: background 0.2s, transform 0.1s;
+            cursor: pointer;
+        }
+        
+        .table-container tbody tr:hover td {
+            background: #f0f4ff;
+        }
+        
+        .table-container tbody tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .table-container .task-title {
+            font-weight: 600;
+            color: #212529;
+        }
+        
+        .table-container .task-description {
+            color: #6c757d;
+            font-size: 12px;
+            margin-top: 4px;
+            display: block;
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* ========== STATUS BADGE ========== */
+        .table-container .status-badge {
+            display: inline-block;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            background: #e9ecef;
+            color: #495057;
+            white-space: nowrap;
+        }
+        
+        /* ========== PRIORITY BADGE ========== */
+        .table-container .priority-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        
+        .table-container .priority-baixa { 
+            background: #d4edda; 
+            color: #155724; 
+        }
+        .table-container .priority-media { 
+            background: #fff3cd; 
+            color: #856404; 
+        }
+        .table-container .priority-alta { 
+            background: #f8d7da; 
+            color: #721c24; 
+        }
+        .table-container .priority-urgente { 
+            background: #dc3545; 
+            color: white; 
+        }
+        
+        /* ========== RESPONSÁVEL ========== */
+        .table-container .responsavel-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .table-container .responsavel-info .avatar-placeholder {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        
+        .table-container .responsavel-info .avatar-placeholder.unassigned {
+            background: #e9ecef;
+            color: #adb5bd;
+        }
+        
+        /* ========== DATA DE VENCIMENTO ========== */
+        .table-container .due-date {
+            white-space: nowrap;
+        }
+        
+        .table-container .due-date.overdue {
+            color: #dc3545;
+            font-weight: 500;
+        }
+        
+        .table-container .due-date.today {
+            color: #f59e0b;
+            font-weight: 500;
+        }
+        
+        .table-container .due-date .fa-exclamation-circle {
+            margin-left: 4px;
+        }
+        
+        /* ========== SUBTAREFAS ========== */
+        .table-container .subtask-count {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #e9ecef;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        .table-container .subtask-count.has-subtasks {
+            background: #667eea;
+            color: white;
+        }
+        
+        /* ========== BOTÃO DE AÇÃO ========== */
+        .table-container .btn-edit {
+            background: none;
+            border: none;
+            color: #adb5bd;
+            padding: 6px 10px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .table-container .btn-edit:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.05);
+        }
+        
+        /* ========== EMPTY STATE ========== */
+        .table-container .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .table-container .empty-state i {
+            font-size: 48px;
+            opacity: 0.3;
+            margin-bottom: 16px;
+            display: block;
+        }
+        
+        /* ========== FILTROS PERSONALIZADOS ========== */
+        .filter-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #e9ecef;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-badge:hover {
+            background: #dee2e6;
+        }
+        .filter-badge .remove-filter {
+            cursor: pointer;
+            color: #dc3545;
+            font-weight: bold;
+            margin-left: 4px;
+        }
+        .filter-badge.active {
+            background: #667eea;
+            color: white;
+        }
+        .filter-badge.active .remove-filter {
+            color: white;
+        }
+        .filters-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 0;
+        }
+        .view-toggle-btn {
+            background: none;
+            border: 1px solid #dee2e6;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .view-toggle-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .view-toggle-btn:hover {
+            background: #f8f9fa;
+        }
+        .view-toggle-btn.active:hover {
+            background: #5a6fd6;
+        }
+        .task-card.sortable-ghost {
+            opacity: 0.5;
+            border: 2px dashed #667eea;
+        }
+        .empty-state-filtered {
+            text-align: center;
+            padding: 30px 20px;
+            color: #6c757d;
+        }
+        .empty-state-filtered i {
+            font-size: 40px;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+        .quick-filter-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        /* ========== RESPONSIVO ========== */
+        @media (max-width: 992px) {
+            .table-container {
+                padding: 16px;
+            }
+            
+            .table-container .list-filters {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 16px;
+            }
+            
+            .table-container .list-filters .filter-group {
+                flex-wrap: wrap;
+            }
+            
+            .table-container .list-filters .filter-stats {
+                margin-left: 0;
+                text-align: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .table-container th,
+            .table-container td {
+                padding: 10px 12px;
+                font-size: 12px;
+            }
+            
+            .table-container .task-description {
+                max-width: 150px;
+            }
+            
+            .board-header {
+                flex-direction: column;
+                gap: 12px;
+                align-items: flex-start;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -48,70 +459,79 @@
             <h2 class="mb-0">{{ board.nome }}</h2>
             <small class="text-muted">{{ board.descricao|default:"Sem descrição" }}</small>
         </div>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTaskModal">
-            <i class="fas fa-plus"></i> Nova tarefa
-        </button>
+        <div class="d-flex gap-2 align-items-center">
+            <!-- Alternância de Visualização -->
+            <div class="btn-group" role="group">
+                <button type="button" class="view-toggle-btn active" data-view="kanban" title="Visualização Kanban">
+                    <i class="fas fa-columns"></i>
+                </button>
+                <button type="button" class="view-toggle-btn" data-view="list" title="Visualização em Lista">
+                    <i class="fas fa-list"></i>
+                </button>
+            </div>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+                <i class="fas fa-plus"></i> Nova tarefa
+            </button>
+        </div>
     </div>
 
     <!-- =====================================================
-         FILTROS
+         FILTROS PERSONALIZADOS
     ===================================================== -->
     <div class="filters-section" id="filtersSection">
-        <div class="filter-group">
+        <div class="d-flex flex-wrap align-items-center gap-3">
             <label><i class="fas fa-filter"></i> Filtros:</label>
-        </div>
+            
+            <div class="quick-filter-group">
+                <button class="filter-badge" data-filter="mine" onclick="toggleFilter('mine')">
+                    <i class="fas fa-user"></i> Minhas tarefas
+                </button>
+                <button class="filter-badge" data-filter="unassigned" onclick="toggleFilter('unassigned')">
+                    <i class="fas fa-user-slash"></i> Sem responsável
+                </button>
+                <button class="filter-badge" data-filter="overdue" onclick="toggleFilter('overdue')">
+                    <i class="fas fa-clock"></i> Vencidas
+                </button>
+                <button class="filter-badge" data-filter="today" onclick="toggleFilter('today')">
+                    <i class="fas fa-calendar-day"></i> Vence hoje
+                </button>
+            </div>
 
-        <div class="filter-group">
-            <label>Prioridade</label>
-            <select id="filterPriority">
-                <option value="all">Todas</option>
+            <select id="filterPriority" class="form-select form-select-sm" style="width: auto;">
+                <option value="all">Todas prioridades</option>
                 <option value="baixa">Baixa</option>
                 <option value="media">Média</option>
                 <option value="alta">Alta</option>
                 <option value="urgente">Urgente</option>
             </select>
-        </div>
 
-        <div class="filter-group">
-            <label>Data</label>
-            <select id="filterDueDate">
-                <option value="all">Todas</option>
-                <option value="overdue">Vencidas</option>
-                <option value="today">Hoje</option>
-                <option value="this_week">Esta semana</option>
-                <option value="no_date">Sem data</option>
-            </select>
-        </div>
-
-        <div class="filter-group">
-            <label>Responsável</label>
-            <select id="filterResponsavel">
-                <option value="all">Todos</option>
+            <select id="filterResponsavel" class="form-select form-select-sm" style="width: auto;">
+                <option value="all">Todos responsáveis</option>
                 <option value="unassigned">Sem responsável</option>
                 {% for usuario in usuarios_board %}
                 <option value="{{ usuario.id }}">{{ usuario.get_full_name|default:usuario.username }}</option>
                 {% endfor %}
             </select>
-        </div>
 
-        <div class="filter-group">
-            <label>Subtarefas</label>
-            <select id="filterSubtasks">
-                <option value="all">Todas</option>
+            <select id="filterSubtasks" class="form-select form-select-sm" style="width: auto;">
+                <option value="all">Todas subtarefas</option>
                 <option value="has_subtasks">Com subtarefas</option>
                 <option value="no_subtasks">Sem subtarefas</option>
                 <option value="completed">100% concluídas</option>
                 <option value="incomplete">Incompletas</option>
             </select>
+
+            <button class="btn btn-sm btn-outline-danger" onclick="clearAllFilters()">
+                <i class="fas fa-times"></i> Limpar todos
+            </button>
+
+            <span class="filter-stats" id="filterStats">
+                Mostrando <strong id="visibleCount">0</strong> tarefas
+            </span>
         </div>
 
-        <button class="clear-filters" onclick="clearFilters()">
-            <i class="fas fa-times"></i> Limpar
-        </button>
-
-        <span class="filter-stats" id="filterStats">
-            Mostrando <strong id="visibleCount">0</strong> tarefas
-        </span>
+        <!-- Filtros ativos (badges) -->
+        <div class="filters-container" id="activeFilters"></div>
     </div>
 
     <!-- =====================================================
@@ -122,18 +542,20 @@
         <div class="kanban-column" data-status="{{ status.id }}" data-status-name="{{ status.nome }}">
             <div class="column-title">
                 {{ status.nome }}
-                <span class="badge bg-secondary float-end" id="count-{{ status.id }}">0</span>
+                <span class="badge bg-secondary" id="count-{{ status.id }}">0</span>
             </div>
             <div class="tasks" id="tasks-{{ status.id }}" data-status="{{ status.id }}">
-                {% for task in status.tasks.all %}
+                {% for task in status.tasks.all|dictsortreversed:"criado_em" %}
                 <!-- ==========================
-                CARD DA TAREFA
+                CARD DA TAREFA (Kanban)
                 ========================== -->
                 <div class="task-card" 
                      data-task-id="{{ task.id }}"
                      data-prioridade="{{ task.prioridade }}"
                      data-responsavel="{{ task.responsavel.id|default:'unassigned' }}"
                      data-data-entrega="{{ task.data_entrega|date:'Y-m-d'|default:'' }}"
+                     data-criado-em="{{ task.criado_em|date:'Y-m-d H:i:s' }}"
+                     data-status="{{ status.id }}"
                      draggable="true"
                      onclick="openTaskModal({{ task.id }})">
                     
@@ -167,6 +589,10 @@
                             <i class="fas fa-user"></i> {{ task.responsavel.get_full_name|default:task.responsavel.username }}
                         </span>
                         {% endif %}
+
+                        <span class="badge bg-light text-dark" title="Criado em">
+                            <i class="fas fa-clock"></i> {{ task.criado_em|date:"d/m/Y" }}
+                        </span>
 
                         {% with total=task.subtasks.count %}
                         {% if total > 0 %}
@@ -214,380 +640,6 @@
                     {% endif %}
                     {% endwith %}
                 </div>
-
-                <!-- ==========================
-                MODAL TAREFA (CORRIGIDO)
-                ========================== -->
-                <div class="modal fade" id="taskModal{{ task.id }}" data-task-id="{{ task.id }}">
-                    <div class="modal-dialog modal-xl modal-dialog-centered">
-                        <div class="modal-content">
-                            <form id="taskForm{{ task.id }}" data-url="{% url 'update_task' task.id %}">
-                                {% csrf_token %}
-
-                                <div class="modal-header">
-                                    <input name="title" class="form-control fs-4 fw-bold" value="{{ task.titulo }}">
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-
-                                <div class="modal-body">
-                                    <div class="row">
-                                        <div class="col-md-8">
-                                            <h6>Descrição</h6>
-                                            <textarea name="description" class="form-control mention-textarea" rows="5" data-task-id="{{ task.id }}">{{ task.descricao }}</textarea>
-
-                                            <hr>
-
-                                            <!-- ==========================================
-                                            CAMPOS DA TAREFA (COM PERMISSÃO CORRIGIDA)
-                                            ========================================== -->
-                                            <div class="row mb-3">
-                                                <div class="col-md-6">
-                                                    <h6>Status</h6>
-                                                    <!-- CORREÇÃO: Sem parênteses aninhados -->
-                                                    {% if user.tipo == 'admin' or user.tipo == 'gerente' or task.permite_edicao_usuario and user == task.criado_por or task.permite_edicao_usuario and user == task.responsavel %}
-                                                        <select name="status" class="form-select">
-                                                            {% for s in status_list %}
-                                                            <option value="{{ s.id }}" {% if task.status.id == s.id %}selected{% endif %}>
-                                                                {{ s.nome }}
-                                                            </option>
-                                                            {% endfor %}
-                                                        </select>
-                                                    {% else %}
-                                                        <select name="status" class="form-select" disabled>
-                                                            <option value="{{ task.status.id }}" selected>{{ task.status.nome }}</option>
-                                                        </select>
-                                                        <input type="hidden" name="status" value="{{ task.status.id }}">
-                                                        <small class="text-muted">
-                                                            <i class="fas fa-lock"></i> Status bloqueado.
-                                                        </small>
-                                                    {% endif %}
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <h6>Prioridade</h6>
-                                                    {% if user.tipo == 'admin' or user.tipo == 'gerente' or task.permite_edicao_usuario and user == task.criado_por or task.permite_edicao_usuario and user == task.responsavel %}
-                                                        <select name="prioridade" class="form-select">
-                                                            <option value="baixa" {% if task.prioridade == "baixa" %}selected{% endif %}>Baixa</option>
-                                                            <option value="media" {% if task.prioridade == "media" %}selected{% endif %}>Média</option>
-                                                            <option value="alta" {% if task.prioridade == "alta" %}selected{% endif %}>Alta</option>
-                                                            <option value="urgente" {% if task.prioridade == "urgente" %}selected{% endif %}>Urgente</option>
-                                                        </select>
-                                                    {% else %}
-                                                        <select name="prioridade" class="form-select" disabled>
-                                                            <option value="{{ task.prioridade }}" selected>{{ task.get_prioridade_display }}</option>
-                                                        </select>
-                                                        <input type="hidden" name="prioridade" value="{{ task.prioridade }}">
-                                                        <small class="text-muted">
-                                                            <i class="fas fa-lock"></i> Prioridade bloqueada.
-                                                        </small>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-
-                                            <div class="row mb-3">
-                                                <div class="col-md-6">
-                                                    <h6>Data de entrega</h6>
-                                                    {% if user.tipo == 'admin' or user.tipo == 'gerente' or task.permite_edicao_usuario and user == task.criado_por or task.permite_edicao_usuario and user == task.responsavel %}
-                                                        <input type="date" name="data_entrega" class="form-control" 
-                                                               value="{{ task.data_entrega|date:'Y-m-d' }}">
-                                                    {% else %}
-                                                        <input type="date" name="data_entrega" class="form-control" 
-                                                               value="{{ task.data_entrega|date:'Y-m-d' }}" disabled>
-                                                        <input type="hidden" name="data_entrega" value="{{ task.data_entrega|date:'Y-m-d' }}">
-                                                        <small class="text-muted">
-                                                            <i class="fas fa-lock"></i> Data bloqueada.
-                                                        </small>
-                                                    {% endif %}
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <h6>Responsável</h6>
-                                                    {% if user.tipo == 'admin' or user.tipo == 'gerente' or task.permite_edicao_usuario and user == task.criado_por or task.permite_edicao_usuario and user == task.responsavel %}
-                                                        <select name="responsavel" class="form-select" id="responsavel-select-{{ task.id }}">
-                                                            <option value="">Sem responsável</option>
-                                                            {% for usuario in usuarios_board %}
-                                                            <option value="{{ usuario.id }}" {% if task.responsavel.id == usuario.id %}selected{% endif %}>
-                                                                {{ usuario.get_full_name|default:usuario.username }}
-                                                                {% if usuario.tipo == 'admin' %} (Admin){% elif usuario.tipo == 'gerente' %} (Gerente){% endif %}
-                                                            </option>
-                                                            {% endfor %}
-                                                        </select>
-                                                        <small class="text-muted">
-                                                            <i class="fas fa-info-circle"></i> Apenas membros deste setor
-                                                        </small>
-                                                    {% else %}
-                                                        <select name="responsavel" class="form-select" disabled>
-                                                            <option value="{{ task.responsavel.id|default:'' }}" selected>
-                                                                {% if task.responsavel %}
-                                                                    {{ task.responsavel.get_full_name|default:task.responsavel.username }}
-                                                                {% else %}
-                                                                    Sem responsável
-                                                                {% endif %}
-                                                            </option>
-                                                        </select>
-                                                        <input type="hidden" name="responsavel" value="{{ task.responsavel.id|default:'' }}">
-                                                        <small class="text-muted">
-                                                            <i class="fas fa-lock"></i> Responsável bloqueado.
-                                                        </small>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-
-                                            <!-- CHECKBOX: PERMITIR EDIÇÃO POR USUÁRIOS (APENAS ADMIN E GERENTE) -->
-                                            {% if user.tipo == 'admin' or user.tipo == 'gerente' %}
-                                            <div class="form-check mb-3">
-                                                <input type="checkbox" name="permite_edicao_usuario" id="permiteEdicao-{{ task.id }}" 
-                                                       class="form-check-input" {% if task.permite_edicao_usuario %}checked{% endif %}>
-                                                <label class="form-check-label" for="permiteEdicao-{{ task.id }}">
-                                                    <i class="fas fa-user-edit"></i> Permitir que usuários editem esta tarefa
-                                                </label>
-                                                <small class="form-text text-muted d-block">
-                                                    Marque esta opção para permitir que usuários comuns editem os campos principais desta tarefa.
-                                                </small>
-                                            </div>
-                                            {% endif %}
-
-                                            <hr>
-
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <h6 class="mb-0">Subtarefas (<span id="subtask-count-{{ task.id }}">{{ task.subtasks.count }}</span>)</h6>
-                                                <button type="button" class="btn btn-sm btn-primary" onclick="openSubtaskModal({{ task.id }})">
-                                                    <i class="fas fa-plus"></i>
-                                                </button>
-                                            </div>
-
-                                            <div class="mt-2 mb-3" id="modal-progress-{{ task.id }}">
-                                                {% with subtasks=task.subtasks.all total=subtasks|length %}
-                                                {% if total > 0 %}
-                                                <div class="task-progress">
-                                                    <div class="progress">
-                                                        <div class="progress-bar" id="modal-progress-bar-{{ task.id }}" 
-                                                             role="progressbar" 
-                                                             style="width: 0%;"
-                                                             aria-valuenow="0" 
-                                                             aria-valuemin="0" 
-                                                             aria-valuemax="100">
-                                                        </div>
-                                                    </div>
-                                                    <div class="progress-label">
-                                                        <span>Progresso</span>
-                                                        <span class="percent" id="modal-progress-percent-{{ task.id }}">0%</span>
-                                                    </div>
-                                                </div>
-                                                {% else %}
-                                                <p class="text-muted small">Nenhuma subtarefa criada</p>
-                                                {% endif %}
-                                                {% endwith %}
-                                            </div>
-
-                                            <div class="mt-3" id="subtasks-container-{{ task.id }}">
-                                                {% for sub in task.subtasks.all %}
-                                                <div class="border rounded p-2 mb-2 d-flex justify-content-between align-items-center subtask-item {% if sub.concluida %}subtask-concluida{% endif %}" 
-                                                     id="subtask-{{ sub.id }}" data-subtask-id="{{ sub.id }}">
-                                                    <div>
-                                                        <strong>{{ sub.titulo }}</strong>
-                                                        <br>
-                                                        <small class="text-muted">
-                                                            <span class="badge {% if sub.concluida %}bg-success{% else %}bg-warning{% endif %}">
-                                                                {% if sub.concluida %}Concluída{% else %}Pendente{% endif %}
-                                                            </span>
-                                                            Prioridade: {{ sub.get_prioridade_display }}
-                                                            {% if sub.responsavel %}
-                                                            | 👤 {{ sub.responsavel.get_full_name|default:sub.responsavel.username }}
-                                                            {% endif %}
-                                                            {% if sub.data_entrega %}
-                                                            | 📅 {{ sub.data_entrega|date:"d/m/Y" }}
-                                                            {% endif %}
-                                                        </small>
-                                                    </div>
-                                                    <div>
-                                                        <button type="button" class="btn btn-sm btn-outline-success me-1" 
-                                                                onclick="event.stopPropagation(); toggleSubtask({{ sub.id }}, {{ task.id }})">
-                                                            {% if sub.concluida %}<i class="fas fa-undo"></i>{% else %}<i class="fas fa-check"></i>{% endif %}
-                                                        </button>
-                                                        <button type="button" class="btn btn-sm btn-outline-primary" 
-                                                                onclick="event.stopPropagation(); openEditSubtaskModal({{ sub.id }})">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                {% empty %}
-                                                <p class="text-muted" id="no-subtasks-{{ task.id }}">Nenhuma subtarefa</p>
-                                                {% endfor %}
-                                            </div>
-
-                                            <hr>
-
-                                            <h6>Histórico</h6>
-                                            <div style="max-height: 200px; overflow-y: auto;">
-                                                {% for h in task.history.all|slice:":10" %}
-                                                <div class="border rounded p-2 mb-2">
-                                                    <strong>{{ h.usuario.get_full_name|default:h.usuario.username }}</strong>
-                                                    <p class="mb-0">Alterou: {{ h.campo }}</p>
-                                                    <p class="mb-0 small">{{ h.valor_antigo }} → {{ h.valor_novo }}</p>
-                                                    <small class="text-muted">{{ h.criado_em|date:"d/m/Y H:i" }}</small>
-                                                </div>
-                                                {% empty %}
-                                                <p class="text-muted">Sem histórico</p>
-                                                {% endfor %}
-                                            </div>
-                                        </div>
-
-                                        <div class="col-md-4 border-start">
-                                            <!-- COMENTÁRIOS -->
-                                            <h6>Comentários</h6>
-                                            <div class="comments-area" id="comments-{{ task.id }}" style="max-height: 400px; overflow-y: auto;">
-                                                {% for comment in task.comments.all %}
-                                                <div class="comment-box">
-                                                    <strong>{{ comment.usuario.get_full_name|default:comment.usuario.username }}</strong>
-                                                    <p>{{ comment.texto|safe }}</p>
-                                                    <small class="text-muted">{{ comment.criado_em|date:"d/m/Y H:i" }}</small>
-                                                </div>
-                                                {% endfor %}
-                                            </div>
-                                            <textarea id="comment-input-{{ task.id }}" class="form-control mt-2 mention-textarea" placeholder="Adicionar comentário (use @ para marcar)" rows="2" data-task-id="{{ task.id }}"></textarea>
-                                            <button type="button" class="btn btn-primary w-100 mt-2" onclick="addComment({{ task.id }})">
-                                                <i class="fas fa-comment"></i> Comentar
-                                            </button>
-
-                                            <hr>
-
-                                            <!-- ANEXOS -->
-                                            <h6>
-                                                <i class="fas fa-paperclip"></i> Anexos 
-                                                <span class="badge bg-secondary" id="anexos-count-{{ task.id }}">0</span>
-                                            </h6>
-                                            
-                                            <div class="anexos-area" id="anexos-container-{{ task.id }}" style="max-height: 250px; overflow-y: auto;">
-                                                <p class="text-muted small" id="no-anexos-{{ task.id }}">Nenhum anexo</p>
-                                            </div>
-                                            
-                                            <!-- Upload de anexo -->
-                                            <div class="mt-2">
-                                                <div class="d-flex gap-2" id="upload-container-{{ task.id }}">
-                                                    <input type="file" id="file-input-{{ task.id }}" class="form-control form-control-sm" 
-                                                           style="font-size: 12px;" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.gif,.zip,.rar">
-                                                    <button type="button" class="btn btn-sm btn-primary" onclick="uploadAnexo({{ task.id }})">
-                                                        <i class="fas fa-upload"></i>
-                                                    </button>
-                                                </div>
-                                                <small class="text-muted" style="font-size: 10px;">
-                                                    <i class="fas fa-info-circle"></i> Máx: 10MB. Formatos: PDF, DOC, XLS, PPT, imagens, ZIP
-                                                </small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="modal-footer">
-                                    {% if user.tipo == 'gerente' or user.tipo == 'admin' %}
-                                        <button type="button" class="btn btn-danger" onclick="deleteTask({{ task.id }})">
-                                            <i class="fas fa-trash"></i> Excluir
-                                        </button>
-                                    {% endif %}
-                                    <button type="button" class="btn btn-success" onclick="saveTask({{ task.id }})">
-                                        <i class="fas fa-save"></i> Salvar
-                                    </button>
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                        Fechar
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ==========================
-                MODAL SUBTAREFA (CRIAR)
-                ========================== -->
-                <div class="modal fade" id="subtaskModal{{ task.id }}">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5><i class="fas fa-plus-circle"></i> Nova subtarefa</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <input id="subtask-title-{{ task.id }}" class="form-control mb-3" placeholder="Título" required>
-                                <select id="subtask-prioridade-{{ task.id }}" class="form-select mb-3">
-                                    <option value="baixa">Baixa</option>
-                                    <option value="media" selected>Média</option>
-                                    <option value="alta">Alta</option>
-                                    <option value="urgente">Urgente</option>
-                                </select>
-                                <label class="mb-1">Data de entrega</label>
-                                <input type="date" id="subtask-data-entrega-{{ task.id }}" class="form-control mb-3">
-                                <label class="mb-1">Responsável</label>
-                                <select id="subtask-responsavel-{{ task.id }}" class="form-select">
-                                    <option value="">Sem responsável</option>
-                                    {% for usuario in usuarios_board %}
-                                    <option value="{{ usuario.id }}">
-                                        {{ usuario.get_full_name|default:usuario.username }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                                <small class="text-muted">
-                                    <i class="fas fa-info-circle"></i> Apenas membros deste setor
-                                </small>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                <button type="button" class="btn btn-success" onclick="saveSubtask({{ task.id }})">
-                                    <i class="fas fa-check"></i> Salvar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ==========================
-                MODAL EDITAR SUBTAREFA
-                ========================== -->
-                <div class="modal fade" id="editSubTaskModal{{ task.id }}">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5><i class="fas fa-edit"></i> Editar subtarefa</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <input id="edit-subtask-title-{{ task.id }}" class="form-control mb-3" placeholder="Título" required>
-                                <select id="edit-subtask-prioridade-{{ task.id }}" class="form-select mb-3">
-                                    <option value="baixa">Baixa</option>
-                                    <option value="media">Média</option>
-                                    <option value="alta">Alta</option>
-                                    <option value="urgente">Urgente</option>
-                                </select>
-                                <select id="edit-subtask-concluida-{{ task.id }}" class="form-select mb-3">
-                                    <option value="False">Pendente</option>
-                                    <option value="True">Concluída</option>
-                                </select>
-                                <label class="mb-1">Data de entrega</label>
-                                <input type="date" id="edit-subtask-data-entrega-{{ task.id }}" class="form-control mb-3">
-                                <label class="mb-1">Responsável</label>
-                                <select id="edit-subtask-responsavel-{{ task.id }}" class="form-select">
-                                    <option value="">Sem responsável</option>
-                                    {% for usuario in usuarios_board %}
-                                    <option value="{{ usuario.id }}">
-                                        {{ usuario.get_full_name|default:usuario.username }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                                <small class="text-muted">
-                                    <i class="fas fa-info-circle"></i> Apenas membros deste setor
-                                </small>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                <button type="button" class="btn btn-success" onclick="updateSubtask({{ task.id }})">
-                                    <i class="fas fa-save"></i> Salvar
-                                </button>
-                                <button type="button" class="btn btn-danger" onclick="deleteSubtask({{ task.id }})">
-                                    <i class="fas fa-trash"></i> Excluir
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 {% endfor %}
             </div>
         </div>
@@ -595,7 +647,136 @@
     </div>
 
     <!-- =====================================================
-         MODAL NOVA TAREFA (CORRIGIDO - CHECKBOX MARCADO POR PADRÃO)
+         VISUALIZAÇÃO EM LISTA (TABELA)
+    ===================================================== -->
+    <div class="table-container" id="tableContainer" style="display: none;">
+        <!-- Filtros específicos da lista -->
+        <div class="list-filters">
+            <div class="filter-group">
+                <label><i class="fas fa-search"></i> Buscar:</label>
+                <input type="text" id="listSearch" placeholder="Pesquisar tarefa..." oninput="filtrarLista()">
+            </div>
+            <div class="filter-group">
+                <label>Status:</label>
+                <select id="listStatusFilter" onchange="filtrarLista()">
+                    <option value="all">Todos os status</option>
+                    {% for status in status_list %}
+                    <option value="{{ status.id }}">{{ status.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Prioridade:</label>
+                <select id="listPriorityFilter" onchange="filtrarLista()">
+                    <option value="all">Todas</option>
+                    <option value="baixa">Baixa</option>
+                    <option value="media">Média</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Responsável:</label>
+                <select id="listResponsavelFilter" onchange="filtrarLista()">
+                    <option value="all">Todos</option>
+                    <option value="unassigned">Sem responsável</option>
+                    {% for usuario in usuarios_board %}
+                    <option value="{{ usuario.id }}">{{ usuario.get_full_name|default:usuario.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <span class="filter-stats" id="listCount">0 tarefas</span>
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 28%;">Tarefa</th>
+                        <th style="width: 15%;">Status</th>
+                        <th style="width: 17%;">Responsável</th>
+                        <th style="width: 15%;">Vencimento</th>
+                        <th style="width: 12%;">Prioridade</th>
+                        <th style="width: 8%;">Subtarefas</th>
+                        <th style="width: 5%;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="listTableBody">
+                    {% for status in status_list %}
+                        {% for task in status.tasks.all|dictsortreversed:"criado_em" %}
+                        <tr class="task-row" 
+                            data-task-id="{{ task.id }}"
+                            data-status="{{ status.id }}"
+                            data-prioridade="{{ task.prioridade }}"
+                            data-responsavel="{{ task.responsavel.id|default:'unassigned' }}"
+                            onclick="openTaskModal({{ task.id }})">
+                            <td>
+                                <div class="task-title">{{ task.titulo }}</div>
+                                {% if task.descricao %}
+                                <span class="task-description">{{ task.descricao|truncatechars:60 }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="status-badge" style="background: {{ status.cor }}20; color: {{ status.cor }};">
+                                    <i class="fas fa-circle" style="font-size: 8px; margin-right: 6px; color: {{ status.cor }};"></i>
+                                    {{ status.nome }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="responsavel-info">
+                                    {% if task.responsavel %}
+                                    <div class="avatar-placeholder">
+                                        {{ task.responsavel.get_full_name|default:task.responsavel.username|first|upper }}
+                                    </div>
+                                    {{ task.responsavel.get_full_name|default:task.responsavel.username }}
+                                    {% else %}
+                                    <div class="avatar-placeholder unassigned">
+                                        <i class="fas fa-user-slash"></i>
+                                    </div>
+                                    <span class="text-muted">Sem responsável</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if task.data_entrega %}
+                                <span class="due-date {% if task.data_entrega < today %}overdue{% elif task.data_entrega == today %}today{% endif %}">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    {{ task.data_entrega|date:"d/m/Y" }}
+                                    {% if task.data_entrega < today %}
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {% endif %}
+                                </span>
+                                {% else %}
+                                <span class="text-muted"><i class="far fa-calendar-alt"></i> Não definida</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="priority-badge priority-{{ task.prioridade }}">
+                                    {{ task.get_prioridade_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% with total=task.subtasks.count %}
+                                <span class="subtask-count {% if total > 0 %}has-subtasks{% endif %}">
+                                    <i class="fas fa-tasks"></i> {{ total }}
+                                </span>
+                                {% endwith %}
+                            </td>
+                            <td>
+                                <button class="btn-edit" onclick="event.stopPropagation(); openTaskModal({{ task.id }})" title="Editar tarefa">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- =====================================================
+         MODAL NOVA TAREFA
     ===================================================== -->
     <div class="modal fade" id="addTaskModal">
         <div class="modal-dialog">
@@ -628,8 +809,6 @@
                             </div>
                         </div>
 
-                        <!-- CHECKBOX: PERMITIR EDIÇÃO POR USUÁRIOS (APENAS ADMIN E GERENTE) -->
-                        <!-- ✅ CORREÇÃO: Adicionado 'checked' para vir marcado por padrão -->
                         {% if user.tipo == 'admin' or user.tipo == 'gerente' %}
                         <div class="form-check mb-3">
                             <input type="checkbox" name="permite_edicao_usuario" id="permiteEdicaoNova" class="form-check-input" checked>
@@ -727,11 +906,12 @@ function getCookie(name) {
 }
 
 const csrftoken = getCookie("csrftoken");
+const currentUserId = {{ user.id }};
+const activeFilters = new Set();
 
 // ===============================
 // MENCIONAR USUÁRIOS (@)
 // ===============================
-
 function initMentionSystem() {
     const usuarios = [
         {% for usuario in usuarios_board %}
@@ -1043,49 +1223,115 @@ document.querySelectorAll('.kanban-column').forEach(column => {
 });
 
 // ===============================
-// FILTROS
+// FILTROS PERSONALIZADOS
+// ===============================
+function toggleFilter(filterName) {
+    const badge = document.querySelector(`[data-filter="${filterName}"]`);
+    
+    if (activeFilters.has(filterName)) {
+        activeFilters.delete(filterName);
+        if (badge) badge.classList.remove('active');
+    } else {
+        activeFilters.add(filterName);
+        if (badge) badge.classList.add('active');
+    }
+    
+    updateActiveFiltersDisplay();
+    aplicarFiltros();
+}
+
+function updateActiveFiltersDisplay() {
+    const container = document.getElementById('activeFilters');
+    container.innerHTML = '';
+    
+    const filterNames = {
+        'mine': 'Minhas tarefas',
+        'unassigned': 'Sem responsável',
+        'overdue': 'Vencidas',
+        'today': 'Vence hoje'
+    };
+    
+    activeFilters.forEach(filter => {
+        const badge = document.createElement('span');
+        badge.className = 'filter-badge active';
+        badge.innerHTML = `
+            <i class="fas fa-tag"></i> ${filterNames[filter] || filter}
+            <span class="remove-filter" onclick="removeFilter('${filter}')">×</span>
+        `;
+        container.appendChild(badge);
+    });
+}
+
+function removeFilter(filterName) {
+    activeFilters.delete(filterName);
+    const badge = document.querySelector(`[data-filter="${filterName}"]`);
+    if (badge) badge.classList.remove('active');
+    updateActiveFiltersDisplay();
+    aplicarFiltros();
+}
+
+function clearAllFilters() {
+    activeFilters.clear();
+    document.querySelectorAll('.filter-badge').forEach(b => b.classList.remove('active'));
+    document.getElementById('filterPriority').value = 'all';
+    document.getElementById('filterResponsavel').value = 'all';
+    document.getElementById('filterSubtasks').value = 'all';
+    updateActiveFiltersDisplay();
+    aplicarFiltros();
+}
+
+// ===============================
+// APLICAR FILTROS (Kanban)
 // ===============================
 function aplicarFiltros() {
     const priority = document.getElementById('filterPriority').value;
-    const dueDate = document.getElementById('filterDueDate').value;
     const responsavel = document.getElementById('filterResponsavel').value;
     const subtasks = document.getElementById('filterSubtasks').value;
-
-    let visibleCount = 0;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().split('T')[0];
 
+    let visibleCount = 0;
+
     document.querySelectorAll('.task-card').forEach(card => {
         let show = true;
+        const taskId = card.dataset.taskId;
+        const dataResponsavel = card.dataset.responsavel;
+        const dataEntrega = card.dataset.dataEntrega;
+        const prioridade = card.dataset.prioridade;
 
-        if (priority !== 'all' && card.dataset.prioridade !== priority) {
-            show = false;
-        }
-
-        if (show && dueDate !== 'all') {
-            const dataEntrega = card.dataset.dataEntrega;
-            if (dueDate === 'no_date' && dataEntrega) {
-                show = false;
-            } else if (dueDate === 'overdue' && (!dataEntrega || dataEntrega >= todayStr)) {
-                show = false;
-            } else if (dueDate === 'today' && dataEntrega !== todayStr) {
-                show = false;
-            } else if (dueDate === 'this_week' && dataEntrega) {
-                const date = new Date(dataEntrega);
-                const diffDays = Math.ceil((date - today) / (1000 * 60 * 60 * 24));
-                if (diffDays < 0 || diffDays > 7) {
-                    show = false;
-                }
-            } else if (dueDate === 'no_date' && dataEntrega) {
+        if (activeFilters.has('mine')) {
+            if (dataResponsavel !== String(currentUserId)) {
                 show = false;
             }
         }
 
-        if (show && responsavel !== 'all') {
-            if (responsavel === 'unassigned' && card.dataset.responsavel !== 'unassigned') {
+        if (show && activeFilters.has('unassigned')) {
+            if (dataResponsavel !== 'unassigned') {
                 show = false;
-            } else if (responsavel !== 'unassigned' && card.dataset.responsavel !== responsavel) {
+            }
+        }
+
+        if (show && activeFilters.has('overdue')) {
+            if (!dataEntrega || dataEntrega >= todayStr) {
+                show = false;
+            }
+        }
+
+        if (show && activeFilters.has('today')) {
+            if (dataEntrega !== todayStr) {
+                show = false;
+            }
+        }
+
+        if (show && priority !== 'all' && prioridade !== priority) {
+            show = false;
+        }
+
+        if (show && responsavel !== 'all') {
+            if (responsavel === 'unassigned' && dataResponsavel !== 'unassigned') {
+                show = false;
+            } else if (responsavel !== 'unassigned' && dataResponsavel !== responsavel) {
                 show = false;
             }
         }
@@ -1093,7 +1339,6 @@ function aplicarFiltros() {
         if (show && subtasks !== 'all') {
             const badge = card.querySelector('.subtask-count-badge');
             const total = badge ? parseInt(badge.textContent.trim()) : 0;
-            const taskId = card.dataset.taskId;
             const container = document.getElementById("subtasks-container-" + taskId);
             let concluidas = 0;
             if (container) {
@@ -1148,13 +1393,92 @@ function aplicarFiltros() {
     });
 }
 
-function clearFilters() {
-    document.getElementById('filterPriority').value = 'all';
-    document.getElementById('filterDueDate').value = 'all';
-    document.getElementById('filterResponsavel').value = 'all';
-    document.getElementById('filterSubtasks').value = 'all';
-    aplicarFiltros();
+// ===============================
+// FILTRAR LISTA (TABELA)
+// ===============================
+function filtrarLista() {
+    const search = document.getElementById('listSearch').value.toLowerCase();
+    const statusFilter = document.getElementById('listStatusFilter').value;
+    const priorityFilter = document.getElementById('listPriorityFilter').value;
+    const responsavelFilter = document.getElementById('listResponsavelFilter').value;
+    
+    const rows = document.querySelectorAll('#listTableBody .task-row');
+    let count = 0;
+    
+    rows.forEach(row => {
+        let show = true;
+        const text = row.textContent.toLowerCase();
+        const status = row.dataset.status;
+        const prioridade = row.dataset.prioridade;
+        const responsavel = row.dataset.responsavel;
+        
+        // Busca
+        if (search && !text.includes(search)) {
+            show = false;
+        }
+        
+        // Status
+        if (show && statusFilter !== 'all' && status !== statusFilter) {
+            show = false;
+        }
+        
+        // Prioridade
+        if (show && priorityFilter !== 'all' && prioridade !== priorityFilter) {
+            show = false;
+        }
+        
+        // Responsável
+        if (show && responsavelFilter !== 'all') {
+            if (responsavelFilter === 'unassigned' && responsavel !== 'unassigned') {
+                show = false;
+            } else if (responsavelFilter !== 'unassigned' && responsavel !== responsavelFilter) {
+                show = false;
+            }
+        }
+        
+        if (show) {
+            row.style.display = '';
+            count++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    document.getElementById('listCount').textContent = count + ' tarefas' + (count !== 1 ? 's' : '');
 }
+
+// ===============================
+// ALTERNÂNCIA DE VISUALIZAÇÃO (KANBAN / LISTA)
+// ===============================
+document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        const view = this.dataset.view;
+        const kanbanContainer = document.getElementById('kanbanContainer');
+        const tableContainer = document.getElementById('tableContainer');
+        
+        if (view === 'list') {
+            kanbanContainer.style.display = 'none';
+            tableContainer.style.display = 'block';
+            setTimeout(filtrarLista, 100);
+        } else {
+            kanbanContainer.style.display = 'flex';
+            tableContainer.style.display = 'none';
+        }
+        
+        localStorage.setItem('board_view_preference', view);
+    });
+});
+
+// Restaurar preferência de visualização
+document.addEventListener('DOMContentLoaded', function() {
+    const savedView = localStorage.getItem('board_view_preference');
+    if (savedView === 'list') {
+        document.querySelector('[data-view="list"]')?.click();
+    }
+});
 
 // ===============================
 // MODAIS
@@ -1987,7 +2311,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     aplicarFiltros();
 
-    document.querySelectorAll('#filterPriority, #filterDueDate, #filterResponsavel, #filterSubtasks').forEach(el => {
+    document.querySelectorAll('#filterPriority, #filterResponsavel, #filterSubtasks').forEach(el => {
         el.addEventListener('change', aplicarFiltros);
     });
 
@@ -2037,6 +2361,9 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(carregarNotificacoes, 500);
 });
 
+// ===============================
+// EVENTOS DE MODAL
+// ===============================
 document.addEventListener('hidden.bs.modal', function(event) {
     const modalId = event.target.id;
     
