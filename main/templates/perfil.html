@@ -29,6 +29,369 @@
             padding: 20px 0;
             min-height: calc(100vh - 56px);
         }
+        
+        .profile-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .profile-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+        
+        .profile-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 30px 30px;
+            text-align: center;
+            color: white;
+        }
+        
+        .avatar-container {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+        
+        .avatar-container img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px solid white;
+            object-fit: cover;
+        }
+        
+        .avatar-edit-btn {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: white;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            color: #667eea;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .avatar-edit-btn:hover {
+            transform: scale(1.1);
+            background: #667eea;
+            color: white;
+        }
+        
+        .profile-header h2 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .profile-header .user-email {
+            opacity: 0.9;
+            margin: 5px 0 0;
+        }
+        
+        .profile-header .user-member-since {
+            opacity: 0.8;
+            font-size: 13px;
+            margin: 10px 0 0;
+        }
+        
+        .profile-form {
+            padding: 30px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+        
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            color: #6c757d;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tab-btn:hover {
+            background: #f8f9fa;
+        }
+        
+        .tab-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            font-weight: 500;
+            color: #2d3748;
+            margin-bottom: 6px;
+            display: block;
+        }
+        
+        .form-group label .text-danger {
+            color: #dc3545;
+        }
+        
+        .form-group .form-control {
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            padding: 12px 16px;
+            transition: all 0.3s;
+        }
+        
+        .form-group .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+        }
+        
+        .form-group .form-control.is-invalid {
+            border-color: #dc3545;
+        }
+        
+        .form-group .invalid-feedback {
+            color: #dc3545;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+        
+        .password-input-group {
+            position: relative;
+        }
+        
+        .password-input-group input {
+            padding-right: 50px;
+        }
+        
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #adb5bd;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .toggle-password:hover {
+            color: #495057;
+        }
+        
+        .password-strength {
+            margin-top: 10px;
+        }
+        
+        .strength-bar {
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .strength-progress {
+            height: 100%;
+            border-radius: 3px;
+            transition: all 0.3s;
+            width: 0%;
+        }
+        
+        .strength-text {
+            font-size: 13px;
+            margin-top: 5px;
+            display: block;
+            color: #6c757d;
+        }
+        
+        .password-requirements {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .password-requirements p {
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+        
+        .password-requirements ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .password-requirements li {
+            padding: 4px 0;
+            font-size: 14px;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .password-requirements li.met {
+            color: #28a745;
+        }
+        
+        .password-requirements li.met i {
+            color: #28a745;
+        }
+        
+        .password-requirements li.unmet i {
+            color: #6c757d;
+        }
+        
+        .security-info {
+            background: #e3f2fd;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #0d47a1;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .form-actions .btn {
+            padding: 10px 30px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+        
+        .form-actions .btn-secondary {
+            background: #e9ecef;
+            border: none;
+            color: #495057;
+        }
+        
+        .form-actions .btn-secondary:hover {
+            background: #dee2e6;
+        }
+        
+        .form-actions .btn-primary {
+            background: #667eea;
+            border: none;
+        }
+        
+        .form-actions .btn-primary:hover {
+            background: #5a6fd6;
+        }
+        
+        .alert {
+            border-radius: 10px;
+            padding: 12px 16px;
+        }
+        
+        .alert i {
+            margin-right: 8px;
+        }
+        
+        /* Toast notification */
+        .toast-notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 9999;
+            animation: slideInRight 0.3s ease;
+            max-width: 400px;
+            min-width: 250px;
+            background: #48bb78;
+        }
+        
+        .toast-notification.error {
+            background: #fc8181;
+        }
+        
+        .toast-notification .toast-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0 0 0 15px;
+            opacity: 0.8;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .profile-form {
+                padding: 20px;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .form-actions .btn {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -62,7 +425,7 @@
                     </p>
                 </div>
 
-                <!-- Formulário de Edição -->
+                <!-- Formulário de Edição - ENVIO TRADICIONAL (SEM AJAX) -->
                 <form id="profileForm" class="profile-form" method="post" action="{% url 'perfil' user.id %}">
                     {% csrf_token %}
                     
@@ -354,7 +717,6 @@
                 special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
             };
 
-            // Atualizar requisitos visuais
             const reqIds = ['req-length', 'req-upper', 'req-lower', 'req-number', 'req-special'];
             const reqKeys = ['length', 'upper', 'lower', 'number', 'special'];
             
@@ -369,7 +731,6 @@
                 }
             });
 
-            // Calcular força
             if (requirements.length) strength++;
             if (requirements.upper) strength++;
             if (requirements.lower) strength++;
@@ -412,13 +773,11 @@
             if (nova && confirmar && nova !== confirmar) {
                 if (confirmarSenha) {
                     confirmarSenha.setCustomValidity('As senhas não coincidem');
-                    confirmarSenha.style.borderColor = '#fc8181';
                 }
                 return false;
             } else {
                 if (confirmarSenha) {
                     confirmarSenha.setCustomValidity('');
-                    confirmarSenha.style.borderColor = '';
                 }
                 return true;
             }
@@ -435,7 +794,7 @@
             });
         }
 
-        // ============ AVATAR ============
+        // ============ AVATAR (MANTIDO AJAX) ============
         if (avatarEditBtn && avatarInput) {
             avatarEditBtn.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -491,122 +850,6 @@
             });
         }
 
-        // ============ SUBMIT DO FORMULÁRIO ============
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-
-                if (!validatePasswords()) {
-                    tabs.forEach(t => t.classList.remove('active'));
-                    tabContents.forEach(tc => tc.classList.remove('active'));
-                    document.querySelector('[data-tab="senha"]')?.classList.add('active');
-                    document.getElementById('tab-senha')?.classList.add('active');
-                    showToast('Por favor, corrija os erros no formulário.', 'error');
-                    return;
-                }
-
-                const formData = new FormData(form);
-                const submitBtn = document.getElementById('submitBtn');
-                const originalText = submitBtn ? submitBtn.innerHTML : 'Salvar';
-                
-                if (submitBtn) {
-                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
-                    submitBtn.disabled = true;
-                }
-
-                fetch(form.action, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': csrfToken
-                    }
-                })
-                .then(response => {
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
-                        return response.json();
-                    }
-                    if (response.redirected) {
-                        window.location.href = response.url;
-                        return null;
-                    }
-                    throw new Error('Resposta não é JSON');
-                })
-                .then(data => {
-                    if (submitBtn) {
-                        submitBtn.innerHTML = originalText;
-                        submitBtn.disabled = false;
-                    }
-                    
-                    if (data && data.success) {
-                        showToast(data.message || 'Perfil atualizado com sucesso!', 'success');
-                        
-                        const firstName = document.getElementById('id_first_name')?.value || '';
-                        const lastName = document.getElementById('id_last_name')?.value || '';
-                        const nomeCompleto = firstName + ' ' + lastName;
-                        const userNameDisplay = document.getElementById('userNameDisplay');
-                        if (userNameDisplay) {
-                            userNameDisplay.textContent = nomeCompleto.trim() || 'Usuário';
-                        }
-                        
-                        // Limpar campos de senha
-                        const senhaAtual = document.getElementById('id_senha_atual');
-                        const novaSenhaInput = document.getElementById('id_nova_senha');
-                        const confirmarSenhaInput = document.getElementById('id_confirmar_senha');
-                        
-                        if (senhaAtual) senhaAtual.value = '';
-                        if (novaSenhaInput) novaSenhaInput.value = '';
-                        if (confirmarSenhaInput) confirmarSenhaInput.value = '';
-                        
-                        if (strengthProgress) {
-                            strengthProgress.style.width = '0%';
-                            strengthProgress.style.background = '';
-                        }
-                        if (strengthText) {
-                            strengthText.textContent = 'Força da senha';
-                            strengthText.style.color = '';
-                        }
-                        
-                        document.querySelectorAll('.requirement').forEach(req => {
-                            req.className = 'requirement unmet';
-                            const icon = req.querySelector('i');
-                            if (icon) {
-                                icon.className = 'fas fa-circle';
-                            }
-                        });
-                        
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1500);
-                        
-                    } else if (data) {
-                        if (data.errors) {
-                            Object.keys(data.errors).forEach(field => {
-                                const fieldElement = document.getElementById(`id_${field}`);
-                                if (fieldElement) {
-                                    fieldElement.classList.add('is-invalid');
-                                    const feedback = fieldElement.parentElement.querySelector('.invalid-feedback');
-                                    if (feedback) {
-                                        feedback.textContent = data.errors[field].join(', ');
-                                    }
-                                }
-                            });
-                        }
-                        showToast(data.message || 'Erro ao salvar alterações', 'error');
-                    }
-                })
-                .catch(error => {
-                    if (submitBtn) {
-                        submitBtn.innerHTML = originalText;
-                        submitBtn.disabled = false;
-                    }
-                    console.error('Erro detalhado:', error);
-                    showToast('Erro ao processar requisição.', 'error');
-                });
-            });
-        }
-
         // ============ BOTÃO CANCELAR ============
         const cancelBtn = document.getElementById('cancelBtn');
         if (cancelBtn) {
@@ -623,65 +866,14 @@
             if (oldToast) oldToast.remove();
 
             const toast = document.createElement('div');
-            toast.className = 'toast-notification';
-            const icons = {
-                success: 'fa-check-circle',
-                error: 'fa-exclamation-circle',
-                warning: 'fa-exclamation-triangle',
-                info: 'fa-info-circle'
-            };
-            
-            const colors = {
-                success: '#48bb78',
-                error: '#fc8181',
-                warning: '#f6ad55',
-                info: '#4299e1'
-            };
+            toast.className = `toast-notification ${type === 'error' ? 'error' : ''}`;
+            const icon = type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle';
             
             toast.innerHTML = `
-                <i class="fas ${icons[type] || icons.info}"></i>
+                <i class="fas ${icon}"></i>
                 <span>${message}</span>
                 <button class="toast-close" onclick="this.parentElement.remove()">×</button>
             `;
-            
-            toast.style.cssText = `
-                position: fixed;
-                top: 80px;
-                right: 20px;
-                padding: 15px 25px;
-                border-radius: 10px;
-                color: white;
-                font-weight: 500;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-                z-index: 9999;
-                animation: slideInRight 0.3s ease;
-                background: ${colors[type] || colors.info};
-                max-width: 400px;
-                min-width: 250px;
-            `;
-
-            const closeBtn = toast.querySelector('.toast-close');
-            if (closeBtn) {
-                closeBtn.style.cssText = `
-                    background: none;
-                    border: none;
-                    color: white;
-                    font-size: 1.5rem;
-                    cursor: pointer;
-                    padding: 0 0 0 15px;
-                    opacity: 0.8;
-                    transition: opacity 0.3s ease;
-                `;
-                closeBtn.addEventListener('mouseover', () => {
-                    closeBtn.style.opacity = '1';
-                });
-                closeBtn.addEventListener('mouseout', () => {
-                    closeBtn.style.opacity = '0.8';
-                });
-            }
 
             document.body.appendChild(toast);
 
@@ -711,32 +903,6 @@
                 e.target.value = value;
             });
         }
-
-        // ============ ESTILOS ADICIONAIS ============
-        const style = document.createElement('style');
-        style.textContent = `
-            .toast-notification {
-                position: fixed;
-                top: 80px;
-                right: 20px;
-                z-index: 9999;
-                animation: slideInRight 0.3s ease;
-            }
-            @keyframes slideInRight {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-            .toast-close:hover {
-                opacity: 1 !important;
-            }
-        `;
-        document.head.appendChild(style);
 
         console.log('Perfil carregado para usuário: {{ user.username }}');
     });
