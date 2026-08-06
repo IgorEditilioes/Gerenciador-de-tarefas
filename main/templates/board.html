@@ -878,6 +878,385 @@
         </div>
     </div>
 
+    <!-- =====================================================
+         MODAL TAREFA (RESTAURADO)
+    ===================================================== -->
+    {% for status in status_list %}
+        {% for task in status.tasks.all %}
+        <div class="modal fade" id="taskModal{{ task.id }}" data-task-id="{{ task.id }}">
+            <div class="modal-dialog modal-xl modal-dialog-centered">
+                <div class="modal-content">
+                    <form id="taskForm{{ task.id }}" data-url="{% url 'update_task' task.id %}">
+                        {% csrf_token %}
+
+                        <div class="modal-header">
+                            <input name="title" class="form-control fs-4 fw-bold" value="{{ task.titulo }}">
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h6>Descrição</h6>
+                                    <textarea name="description" class="form-control mention-textarea" rows="5" data-task-id="{{ task.id }}">{{ task.descricao }}</textarea>
+
+                                    <hr>
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <h6>Status</h6>
+                                            {% if user.tipo == 'admin' or user.tipo == 'gerente' or task.permite_edicao_usuario and user == task.criado_por or task.permite_edicao_usuario and user == task.responsavel %}
+                                                <select name="status" class="form-select">
+                                                    {% for s in status_list %}
+                                                    <option value="{{ s.id }}" {% if task.status.id == s.id %}selected{% endif %}>
+                                                        {{ s.nome }}
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                            {% else %}
+                                                <select name="status" class="form-select" disabled>
+                                                    <option value="{{ task.status.id }}" selected>{{ task.status.nome }}</option>
+                                                </select>
+                                                <input type="hidden" name="status" value="{{ task.status.id }}">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-lock"></i> Status bloqueado.
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>Prioridade</h6>
+                                            {% if user.tipo == 'admin' or user.tipo == 'gerente' or task.permite_edicao_usuario and user == task.criado_por or task.permite_edicao_usuario and user == task.responsavel %}
+                                                <select name="prioridade" class="form-select">
+                                                    <option value="baixa" {% if task.prioridade == "baixa" %}selected{% endif %}>Baixa</option>
+                                                    <option value="media" {% if task.prioridade == "media" %}selected{% endif %}>Média</option>
+                                                    <option value="alta" {% if task.prioridade == "alta" %}selected{% endif %}>Alta</option>
+                                                    <option value="urgente" {% if task.prioridade == "urgente" %}selected{% endif %}>Urgente</option>
+                                                </select>
+                                            {% else %}
+                                                <select name="prioridade" class="form-select" disabled>
+                                                    <option value="{{ task.prioridade }}" selected>{{ task.get_prioridade_display }}</option>
+                                                </select>
+                                                <input type="hidden" name="prioridade" value="{{ task.prioridade }}">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-lock"></i> Prioridade bloqueada.
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <h6>Data de entrega</h6>
+                                            {% if user.tipo == 'admin' or user.tipo == 'gerente' or task.permite_edicao_usuario and user == task.criado_por or task.permite_edicao_usuario and user == task.responsavel %}
+                                                <input type="date" name="data_entrega" class="form-control" 
+                                                       value="{{ task.data_entrega|date:'Y-m-d' }}">
+                                            {% else %}
+                                                <input type="date" name="data_entrega" class="form-control" 
+                                                       value="{{ task.data_entrega|date:'Y-m-d' }}" disabled>
+                                                <input type="hidden" name="data_entrega" value="{{ task.data_entrega|date:'Y-m-d' }}">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-lock"></i> Data bloqueada.
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>Responsável</h6>
+                                            {% if user.tipo == 'admin' or user.tipo == 'gerente' or task.permite_edicao_usuario and user == task.criado_por or task.permite_edicao_usuario and user == task.responsavel %}
+                                                <select name="responsavel" class="form-select" id="responsavel-select-{{ task.id }}">
+                                                    <option value="">Sem responsável</option>
+                                                    {% for usuario in usuarios_board %}
+                                                    <option value="{{ usuario.id }}" {% if task.responsavel.id == usuario.id %}selected{% endif %}>
+                                                        {{ usuario.get_full_name|default:usuario.username }}
+                                                        {% if usuario.tipo == 'admin' %} (Admin){% elif usuario.tipo == 'gerente' %} (Gerente){% endif %}
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-info-circle"></i> Apenas membros deste setor
+                                                </small>
+                                            {% else %}
+                                                <select name="responsavel" class="form-select" disabled>
+                                                    <option value="{{ task.responsavel.id|default:'' }}" selected>
+                                                        {% if task.responsavel %}
+                                                            {{ task.responsavel.get_full_name|default:task.responsavel.username }}
+                                                        {% else %}
+                                                            Sem responsável
+                                                        {% endif %}
+                                                    </option>
+                                                </select>
+                                                <input type="hidden" name="responsavel" value="{{ task.responsavel.id|default:'' }}">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-lock"></i> Responsável bloqueado.
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    {% if user.tipo == 'admin' or user.tipo == 'gerente' %}
+                                    <div class="form-check mb-3">
+                                        <input type="checkbox" name="permite_edicao_usuario" id="permiteEdicao-{{ task.id }}" 
+                                               class="form-check-input" {% if task.permite_edicao_usuario %}checked{% endif %}>
+                                        <label class="form-check-label" for="permiteEdicao-{{ task.id }}">
+                                            <i class="fas fa-user-edit"></i> Permitir que usuários editem esta tarefa
+                                        </label>
+                                        <small class="form-text text-muted d-block">
+                                            Marque esta opção para permitir que usuários comuns editem os campos principais desta tarefa.
+                                        </small>
+                                    </div>
+                                    {% endif %}
+
+                                    <hr>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">Subtarefas (<span id="subtask-count-{{ task.id }}">{{ task.subtasks.count }}</span>)</h6>
+                                        <button type="button" class="btn btn-sm btn-primary" onclick="openSubtaskModal({{ task.id }})">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+
+                                    <div class="mt-2 mb-3" id="modal-progress-{{ task.id }}">
+                                        {% with subtasks=task.subtasks.all total=subtasks|length %}
+                                        {% if total > 0 %}
+                                        <div class="task-progress">
+                                            <div class="progress">
+                                                <div class="progress-bar" id="modal-progress-bar-{{ task.id }}" 
+                                                     role="progressbar" 
+                                                     style="width: 0%;"
+                                                     aria-valuenow="0" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100">
+                                                </div>
+                                            </div>
+                                            <div class="progress-label">
+                                                <span>Progresso</span>
+                                                <span class="percent" id="modal-progress-percent-{{ task.id }}">0%</span>
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <p class="text-muted small">Nenhuma subtarefa criada</p>
+                                        {% endif %}
+                                        {% endwith %}
+                                    </div>
+
+                                    <div class="mt-3" id="subtasks-container-{{ task.id }}">
+                                        {% for sub in task.subtasks.all %}
+                                        <div class="border rounded p-2 mb-2 d-flex justify-content-between align-items-center subtask-item {% if sub.concluida %}subtask-concluida{% endif %}" 
+                                             id="subtask-{{ sub.id }}" data-subtask-id="{{ sub.id }}">
+                                            <div>
+                                                <strong>{{ sub.titulo }}</strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    <span class="badge {% if sub.concluida %}bg-success{% else %}bg-warning{% endif %}">
+                                                        {% if sub.concluida %}Concluída{% else %}Pendente{% endif %}
+                                                    </span>
+                                                    Prioridade: {{ sub.get_prioridade_display }}
+                                                    {% if sub.responsavel %}
+                                                    | 👤 {{ sub.responsavel.get_full_name|default:sub.responsavel.username }}
+                                                    {% endif %}
+                                                    {% if sub.data_entrega %}
+                                                    | 📅 {{ sub.data_entrega|date:"d/m/Y" }}
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                            <div>
+                                                <button type="button" class="btn btn-sm btn-outline-success me-1" 
+                                                        onclick="event.stopPropagation(); toggleSubtask({{ sub.id }}, {{ task.id }})">
+                                                    {% if sub.concluida %}<i class="fas fa-undo"></i>{% else %}<i class="fas fa-check"></i>{% endif %}
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                        onclick="event.stopPropagation(); openEditSubtaskModal({{ sub.id }})">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {% empty %}
+                                        <p class="text-muted" id="no-subtasks-{{ task.id }}">Nenhuma subtarefa</p>
+                                        {% endfor %}
+                                    </div>
+
+                                    <hr>
+
+                                    <h6>Histórico</h6>
+                                    <div style="max-height: 200px; overflow-y: auto;">
+                                        {% for h in task.history.all|slice:":10" %}
+                                        <div class="border rounded p-2 mb-2">
+                                            <strong>{{ h.usuario.get_full_name|default:h.usuario.username }}</strong>
+                                            <p class="mb-0">Alterou: {{ h.campo }}</p>
+                                            <p class="mb-0 small">{{ h.valor_antigo }} → {{ h.valor_novo }}</p>
+                                            <small class="text-muted">{{ h.criado_em|date:"d/m/Y H:i" }}</small>
+                                        </div>
+                                        {% empty %}
+                                        <p class="text-muted">Sem histórico</p>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4 border-start">
+                                    <!-- COMENTÁRIOS -->
+                                    <h6>Comentários</h6>
+                                    <div class="comments-area" id="comments-{{ task.id }}" style="max-height: 400px; overflow-y: auto;">
+                                        {% for comment in task.comments.all %}
+                                        <div class="comment-box">
+                                            <strong>{{ comment.usuario.get_full_name|default:comment.usuario.username }}</strong>
+                                            <p>{{ comment.texto|safe }}</p>
+                                            <small class="text-muted">{{ comment.criado_em|date:"d/m/Y H:i" }}</small>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <textarea id="comment-input-{{ task.id }}" class="form-control mt-2 mention-textarea" placeholder="Adicionar comentário (use @ para marcar)" rows="2" data-task-id="{{ task.id }}"></textarea>
+                                    <button type="button" class="btn btn-primary w-100 mt-2" onclick="addComment({{ task.id }})">
+                                        <i class="fas fa-comment"></i> Comentar
+                                    </button>
+
+                                    <hr>
+
+                                    <!-- ANEXOS -->
+                                    <h6>
+                                        <i class="fas fa-paperclip"></i> Anexos 
+                                        <span class="badge bg-secondary" id="anexos-count-{{ task.id }}">0</span>
+                                    </h6>
+                                    
+                                    <div class="anexos-area" id="anexos-container-{{ task.id }}" style="max-height: 250px; overflow-y: auto;">
+                                        <p class="text-muted small" id="no-anexos-{{ task.id }}">Nenhum anexo</p>
+                                    </div>
+                                    
+                                    <div class="mt-2">
+                                        <div class="d-flex gap-2" id="upload-container-{{ task.id }}">
+                                            <input type="file" id="file-input-{{ task.id }}" class="form-control form-control-sm" 
+                                                   style="font-size: 12px;" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.gif,.zip,.rar">
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="uploadAnexo({{ task.id }})">
+                                                <i class="fas fa-upload"></i>
+                                            </button>
+                                        </div>
+                                        <small class="text-muted" style="font-size: 10px;">
+                                            <i class="fas fa-info-circle"></i> Máx: 10MB. Formatos: PDF, DOC, XLS, PPT, imagens, ZIP
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            {% if user.tipo == 'gerente' or user.tipo == 'admin' %}
+                                <button type="button" class="btn btn-danger" onclick="deleteTask({{ task.id }})">
+                                    <i class="fas fa-trash"></i> Excluir
+                                </button>
+                            {% endif %}
+                            <button type="button" class="btn btn-success" onclick="saveTask({{ task.id }})">
+                                <i class="fas fa-save"></i> Salvar
+                            </button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                Fechar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% endfor %}
+
+    <!-- =====================================================
+         MODAL SUBTAREFA (CRIAR) - Restaurado
+    ===================================================== -->
+    {% for status in status_list %}
+        {% for task in status.tasks.all %}
+        <div class="modal fade" id="subtaskModal{{ task.id }}">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5><i class="fas fa-plus-circle"></i> Nova subtarefa</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input id="subtask-title-{{ task.id }}" class="form-control mb-3" placeholder="Título" required>
+                        <select id="subtask-prioridade-{{ task.id }}" class="form-select mb-3">
+                            <option value="baixa">Baixa</option>
+                            <option value="media" selected>Média</option>
+                            <option value="alta">Alta</option>
+                            <option value="urgente">Urgente</option>
+                        </select>
+                        <label class="mb-1">Data de entrega</label>
+                        <input type="date" id="subtask-data-entrega-{{ task.id }}" class="form-control mb-3">
+                        <label class="mb-1">Responsável</label>
+                        <select id="subtask-responsavel-{{ task.id }}" class="form-select">
+                            <option value="">Sem responsável</option>
+                            {% for usuario in usuarios_board %}
+                            <option value="{{ usuario.id }}">
+                                {{ usuario.get_full_name|default:usuario.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i> Apenas membros deste setor
+                        </small>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-success" onclick="saveSubtask({{ task.id }})">
+                            <i class="fas fa-check"></i> Salvar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% endfor %}
+
+    <!-- =====================================================
+         MODAL EDITAR SUBTAREFA - Restaurado
+    ===================================================== -->
+    {% for status in status_list %}
+        {% for task in status.tasks.all %}
+        <div class="modal fade" id="editSubTaskModal{{ task.id }}">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5><i class="fas fa-edit"></i> Editar subtarefa</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input id="edit-subtask-title-{{ task.id }}" class="form-control mb-3" placeholder="Título" required>
+                        <select id="edit-subtask-prioridade-{{ task.id }}" class="form-select mb-3">
+                            <option value="baixa">Baixa</option>
+                            <option value="media">Média</option>
+                            <option value="alta">Alta</option>
+                            <option value="urgente">Urgente</option>
+                        </select>
+                        <select id="edit-subtask-concluida-{{ task.id }}" class="form-select mb-3">
+                            <option value="False">Pendente</option>
+                            <option value="True">Concluída</option>
+                        </select>
+                        <label class="mb-1">Data de entrega</label>
+                        <input type="date" id="edit-subtask-data-entrega-{{ task.id }}" class="form-control mb-3">
+                        <label class="mb-1">Responsável</label>
+                        <select id="edit-subtask-responsavel-{{ task.id }}" class="form-select">
+                            <option value="">Sem responsável</option>
+                            {% for usuario in usuarios_board %}
+                            <option value="{{ usuario.id }}">
+                                {{ usuario.get_full_name|default:usuario.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i> Apenas membros deste setor
+                        </small>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-success" onclick="updateSubtask({{ task.id }})">
+                            <i class="fas fa-save"></i> Salvar
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="deleteSubtask({{ task.id }})">
+                            <i class="fas fa-trash"></i> Excluir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% endfor %}
+
 <!-- =====================================================
      SCRIPTS
      ===================================================== -->

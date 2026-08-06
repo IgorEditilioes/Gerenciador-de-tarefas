@@ -583,7 +583,7 @@ def get_task_board(request, task_id):
 
 
 # =========================
-# ADD TASK (CORRIGIDO)
+# ADD TASK (CORRIGIDO - ADMIN/GERENTE SEMPRE TRUE)
 # =========================
 @login_required
 def add_task(request, board_id):
@@ -657,15 +657,9 @@ def add_task(request, board_id):
     if data_entrega == '':
         data_entrega = None
 
-    # ✅ CORREÇÃO: Respeitar o valor do checkbox
-    # Para Admin e Gerente: usar o valor do checkbox
-    # Para Usuário comum: sempre True (pode editar as próprias tarefas)
-    if usuario.tipo in ['admin', 'gerente']:
-        # Admin/Gerente: usa o valor enviado pelo checkbox
-        permite_edicao_usuario = request.POST.get("permite_edicao_usuario") == 'on'
-    else:
-        # Usuário comum: sempre True (pode editar as próprias tarefas)
-        permite_edicao_usuario = True
+    # ✅ CORREÇÃO: Admin e Gerente SEMPRE criam com True
+    # Usuário comum também cria com True (pode editar suas próprias tarefas)
+    permite_edicao_usuario = True
 
     task = Task.objects.create(
         board=board,
@@ -698,7 +692,7 @@ def add_task(request, board_id):
 
 
 # =========================
-# UPDATE TASK
+# UPDATE TASK (CORRIGIDO)
 # =========================
 @login_required
 def update_task(request, task_id):
@@ -757,7 +751,14 @@ def update_task(request, task_id):
     prioridade = request.POST.get("prioridade")
     status_id = request.POST.get("status")
     responsavel_id = request.POST.get("responsavel")
-    permite_edicao_usuario = request.POST.get("permite_edicao_usuario") == 'on'
+    
+    # ✅ CORREÇÃO: Manter o valor original se o usuário não for Admin ou Gerente
+    if usuario.tipo in ['admin', 'gerente']:
+        # Admin/Gerente podem alterar a permissão
+        permite_edicao_usuario = request.POST.get("permite_edicao_usuario") == 'on'
+    else:
+        # Usuário comum não pode alterar - manter valor original
+        permite_edicao_usuario = task.permite_edicao_usuario
 
     if not titulo:
         return JsonResponse({"success": False, "error": "Título é obrigatório"})
@@ -799,7 +800,7 @@ def update_task(request, task_id):
     task.status_id = status_id
     task.responsavel_id = int(responsavel_id) if responsavel_id and responsavel_id != '' else None
     task.data_entrega = data_entrega
-    task.permite_edicao_usuario = permite_edicao_usuario
+    task.permite_edicao_usuario = permite_edicao_usuario  # ✅ Usar a variável corrigida
     task.atualizado_por = request.user
     task.save()
 
@@ -813,6 +814,7 @@ def update_task(request, task_id):
         notificar_atribuicao(task.responsavel, task, responsavel_anterior)
 
     return JsonResponse({"success": True})
+
 
 
 # =========================
